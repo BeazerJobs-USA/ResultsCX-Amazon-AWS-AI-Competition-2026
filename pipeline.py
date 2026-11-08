@@ -21,6 +21,7 @@ from pathlib import Path
 
 import get_data
 import prompts
+import security_controls
 from harness_client import HarnessError
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -120,6 +121,35 @@ def ensure_cloud_upload_authorized(data):
             "Private QA data cannot be sent to AWS by default. Obtain written authorization, "
             "review redaction, and explicitly set ALLOW_PRIVATE_CLOUD_SEND=1."
         )
+
+
+def known_staff_names(data):
+    """Read local identities only for masking; never return them to the model."""
+    return list(data.get("agent_map", {}).values()) + list(
+        data.get("team_lead_map", {}).values()
+    )
+
+
+def build_safe_model_payload(data):
+    """Second privacy checkpoint, after Excel parsing but BEFORE an AWS call.
+
+    The same helper protects both the diagnosis prompt and the Bedrock tool
+    callback (so the model cannot request the unfiltered payload instead).
+    """
+    payload = get_data.build_model_payload(data)
+    safe_payload, _count = security_controls.sanitize_payload(
+        payload, known_staff_names(data)
+    )
+    return safe_payload
+
+
+def sanitize_model_prompt(prompt, data):
+    """Check final text too: supervisor edits and quotes bypass Stage 1 summaries."""
+    safe_prompt, _count = security_controls.sanitize_text(
+        prompt, known_staff_names(data)
+    )
+    get_data.assert_no_real_names(safe_prompt, data)
+    return safe_prompt
 
 
 # ======================================================================================
@@ -254,9 +284,10 @@ def validate_diagnosis(diagnosis, data):
 def run_diagnosis(session, data, max_findings=5, on_text=None):
     """Bedrock call #1. Returns the validated diagnosis dict (also saved to outputs/)."""
     ensure_cloud_upload_authorized(data)
-    payload = get_data.build_model_payload(data)
-    prompt = prompts.build_diagnosis_prompt(payload, max_findings=max_findings)
-    get_data.assert_no_real_names(prompt, data)  # defence in depth
+    payload = build_safe_model_payload(data)
+    prompt = sanitize_model_prompt(
+        prompts.build_diagnosis_prompt(payload, max_findings=max_findings), data
+    )
     text, turn = session.ask(
         prompt, system_prompt=prompts.SYSTEM_PROMPT, on_text=on_text
     )
@@ -483,12 +514,14 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
     for i, finding in enumerate(approved_findings, start=1):
         if on_progress:
             on_progress(i, len(approved_findings), finding)
-        prompt = prompts.build_training_prompt(
-            finding,
-            evidence_lines_for(finding, data),
-            related_outline_entries(finding, data["outline"]),
+        prompt = sanitize_model_prompt(
+            prompts.build_training_prompt(
+                finding,
+                evidence_lines_for(finding, data),
+                related_outline_entries(finding, data["outline"]),
+            ),
+            data,
         )
-        get_data.assert_no_real_names(prompt, data)
         try:
             text, turn = session.ask(
                 prompt, system_prompt=prompts.SYSTEM_PROMPT, on_text=on_text

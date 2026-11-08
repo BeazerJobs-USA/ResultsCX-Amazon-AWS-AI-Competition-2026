@@ -19,6 +19,8 @@ digraph AgentQA {
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Normalize evidence<BR/>and link record IDs</FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" COLOR="#42607C">↓</FONT></TD></TR>
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Calculate behavior-level<BR/>defect rates</FONT></TD></TR>
+      <TR><TD BGCOLOR="#E2F3FF"><FONT FACE="Arial"><B>Privacy checkpoint:</B><BR/>mask model-bound identifiers</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Editable business case:<BR/>prep hours and labor value</FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: metrics and evidence</FONT></TD></TR>
     </TABLE>
   >];
@@ -40,6 +42,7 @@ digraph AgentQA {
     <TABLE BORDER="1" COLOR="#68B98F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDFAF2">
       <TR><TD BGCOLOR="#CEEEDB"><FONT FACE="Arial" POINT-SIZE="18"><B>03  SUPERVISOR REVIEW</B></FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Manager or supervisor decision</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial"><B>Urgent review flag:</B> failed<BR/>identity/privacy QA controls</FONT></TD></TR>
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Read cited evidence,<BR/>defect rate and proposed cause</FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓  Choose an action</FONT></TD></TR>
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Revise:</B> cause, intervention, notes<BR/><B>Include:</B> approve for coaching<BR/><B>Exclude:</B> skip this finding</FONT></TD></TR>

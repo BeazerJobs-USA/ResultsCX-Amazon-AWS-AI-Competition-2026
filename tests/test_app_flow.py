@@ -162,6 +162,9 @@ class FakeStreamlit(types.ModuleType):
     def slider(self, label, min_value=None, max_value=None, value=None, key=None, **kw):
         return self._scripted(key, label, value)
 
+    def number_input(self, label, min_value=None, max_value=None, value=None, key=None, **kw):
+        return self._scripted(key, label, value)
+
     def button(self, label, key=None, **kw):
         self.log.append(("button", label))
         return bool(self.clicks.pop(label, False))
@@ -398,6 +401,8 @@ class AppFlowTests(unittest.TestCase):
         self.assertIn("APPROVE DIAGNOSIS", drawn(st, "button"))
         self.assertIn("2 · AI diagnosis", drawn(st, "header"))
         self.assertIn("3 · Supervisor review", drawn(st, "header"))
+        self.assertIn("IMMEDIATE REVIEW NEEDED", drawn(st, "error"))
+        self.assertIn("Interactive business impact", drawn(st, "expander"))
         self.assertIsNone(state.training)
 
         # ---- run 4: supervisor edits F1, excludes F2, approves -> training generated automatically ----

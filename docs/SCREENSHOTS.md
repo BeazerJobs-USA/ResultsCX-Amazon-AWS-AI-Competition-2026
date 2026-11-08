@@ -6,7 +6,7 @@ These two images show the broader coaching experience our competition concept wa
 
 ![Illustrative roleplay screen](screenshots/agent-qa-roleplay-demo.webp)
 
-This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. It communicates the proposed business value of reducing manual coaching preparation, but it does not measure actual supervisor time or calculate verified savings. The baseline and labor amounts are synthetic. Its post-training evaluation is pending.
+This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. It communicates the proposed business value of reducing manual coaching preparation, but it does not measure actual supervisor time or calculate verified savings. **Separately, the working Streamlit app now includes a real, editable scenario calculator**; the image itself is still a mockup. The image's baseline and labor amounts are synthetic. Its post-training evaluation is pending.
 
 ## Coaching and alignment concept
 

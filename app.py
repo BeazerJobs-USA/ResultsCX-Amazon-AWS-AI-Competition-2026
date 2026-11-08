@@ -13,6 +13,8 @@ import streamlit as st
 import get_data
 import pipeline
 import sample_walkthrough
+import security_controls
+from business_impact import calculate_business_impact
 from harness_client import HarnessError, HarnessSession, get_config
 
 # ======================================================================================
@@ -202,6 +204,86 @@ with st.expander("Privacy and data-quality checks"):
                 f"{'PASS' if ok else 'FAIL'} — {name}  ({detail})"
             )
 
+    # This second pass checks the entire AI payload, not just Excel comments.
+    # It runs locally and sends nothing to AWS when the screen opens.
+    _, extra_masks = security_controls.sanitize_payload(
+        get_data.build_model_payload(data), pipeline.known_staff_names(data)
+    )
+    st.caption(
+        f"Pre-model privacy checkpoint: {extra_masks} additional identifier patterns "
+        "masked in a copy of this intake payload. The final prompts and tool replies "
+        "are checked again before AWS calls. Regex masking is not complete de-identification."
+    )
+
+# Show the potential business value from the FIRST screen of a short demo.
+# Every number is editable; nothing is presented as a real measured saving.
+with st.expander("📊 Interactive business impact · supervisor preparation time", expanded=True):
+    st.markdown(
+        "**Business problem:** A QA score identifies a missed behavior, but a supervisor "
+        "still has to turn it into a useful lesson, quiz, and practice scenario. "
+        "This estimates the preparation time that the coaching workflow *might* free up."
+    )
+    left, right = st.columns(2)
+    cases_per_week = left.number_input(
+        "Coaching packages prepared per week", min_value=0, value=40, step=5
+    )
+    manual_minutes = left.number_input(
+        "Manual preparation minutes per package", min_value=0, value=30, step=5
+    )
+    assisted_minutes = right.number_input(
+        "AI-assisted minutes per package (including human review)",
+        min_value=0,
+        value=18,
+        step=5,
+    )
+    hourly_rate = right.number_input(
+        "Fully loaded supervisor hourly cost ($)",
+        min_value=0.0,
+        value=45.0,
+        step=5.0,
+    )
+    weeks_per_year = st.number_input(
+        "Working weeks per year", min_value=0, max_value=52, value=50, step=1
+    )
+    impact = calculate_business_impact(
+        cases_per_week, manual_minutes, assisted_minutes, hourly_rate, weeks_per_year
+    )
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Supervisor hours freed / week", f"{impact['saved_weekly_hours']:,.1f}")
+    c2.metric("Supervisor hours freed / year", f"{impact['saved_annual_hours']:,.0f}")
+    c3.metric(
+        "Annual labor-capacity value", f"${impact['annual_capacity_value']:,.0f}"
+    )
+    st.table(
+        pd.DataFrame(
+            [
+                {
+                    "Preparation scenario": "Manual process",
+                    "Hours / week": round(impact["manual_weekly_hours"], 1),
+                    "Hours / year": round(impact["manual_weekly_hours"] * weeks_per_year, 1),
+                },
+                {
+                    "Preparation scenario": "AI-assisted + supervisor review",
+                    "Hours / week": round(impact["assisted_weekly_hours"], 1),
+                    "Hours / year": round(impact["assisted_weekly_hours"] * weeks_per_year, 1),
+                },
+                {
+                    "Preparation scenario": "Potential time freed",
+                    "Hours / week": round(impact["saved_weekly_hours"], 1),
+                    "Hours / year": round(impact["saved_annual_hours"], 1),
+                },
+            ]
+        )
+    )
+    st.caption(
+        f"Scenario only · {impact['time_reduction_pct']:.0f}% change in preparation time. "
+        "These starting inputs are hypothetical, not observed ResultsCX results. "
+        "Time freed is potential capacity, not guaranteed payroll savings. "
+        "A pilot must measure actual preparation and review time, QA defect rates, "
+        "and subsequent employee performance. Negative values mean the assisted process "
+        "would take longer under the chosen assumptions."
+    )
+
 st.subheader("Defect rates by QA behavior (computed, not generated)")
 behavior_rows = [
     {
@@ -269,7 +351,7 @@ if st.session_state.diagnosis is None:
                     )
                 session = HarnessSession(
                     tools={
-                        "get_all_data": lambda **kw: get_data.build_model_payload(data)
+                        "get_all_data": lambda **kw: pipeline.build_safe_model_payload(data)
                     }
                 )
                 st.session_state.session = session
@@ -436,6 +518,38 @@ if diag:
     # ==================================================================================
     st.divider()
     st.header("3 · Supervisor review (Human Validation)")
+    urgent_items = security_controls.critical_compliance_alerts(data)
+    if urgent_items:
+        # Deterministic alert: visible as soon as Stage 3 loads, before approval.
+        # It does not contact anyone outside the app or declare a HIPAA violation.
+        st.error(
+            f"🚨 IMMEDIATE REVIEW NEEDED: {len(urgent_items)} potentially critical "
+            "identity/privacy compliance failure(s) in the QA scores. "
+            "Review these records and follow your organization's escalation policy. "
+            "AI diagnosis is not required to raise this flag."
+        )
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "record ID": item["record_id"],
+                        "employee code": item["agent"],
+                        "failed control": security_controls.sanitize_text(item["behavior"])[0],
+                        "action": "Supervisor review / compliance escalation",
+                    }
+                    for item in urgent_items
+                ]
+            ),
+            width="stretch",
+            hide_index=True,
+        )
+        st.caption(
+            "Rule: failed Compliance (CO) item referencing identity verification or privacy. "
+            "This is a potential-risk flag, not a verified incident, legal determination, "
+            "external notification, or substitute for the supervisor's judgment."
+        )
+    else:
+        st.success("No failed identity/privacy compliance items matched the current alert rules.")
     if st.session_state.training is None:
         st.markdown(
             "Correct anything the AI got wrong, untick findings that should not become training, then approve. "

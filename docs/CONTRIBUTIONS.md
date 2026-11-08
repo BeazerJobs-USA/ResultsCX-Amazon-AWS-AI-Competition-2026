@@ -13,6 +13,16 @@ I'm George Beazer, a senior cybersecurity student at KSU. This was a six person 
 
 Later code revisions added synthetic sample data, tighter citation checks, private data access guards, and an offline walkthrough. Those changes are separate from the work completed during the two day competition. The privacy controls reflect healthcare confidentiality and HIPAA aware design concerns, but they are not a claim that the prototype is HIPAA compliant.
 
+## Additional public prototype improvements (November 2026)
+
+In a later portfolio revision, I extended the app with three small, understandable features. These are **my later improvements to the publicly documented project**, not features I am claiming were deployed in the September competition:
+
+1. **Pre-model data sanitization:** I added `security_controls.py` and wired it through `pipeline.build_safe_model_payload()` and `pipeline.sanitize_model_prompt()`. It checks every nested text field in the model-facing QA summary, and checks complete prompts after supervisor edits, for recognizable personal identifiers. Both the diagnosis path and the optional Bedrock tool response use the filtered data.
+2. **Potential-critical compliance alerts:** I added a deterministic rule that picks up failed `CO` evaluations mentioning identity verification or privacy. The Supervisor Review UI highlights affected record IDs immediately, without making an AI model decide whether an issue deserves attention. This is in-app escalation for review, not a sent incident ticket or legal finding.
+3. **Interactive business impact:** I added `business_impact.py` and the editable calculator on the first Streamlit screen. It compares manual versus AI-assisted preparation **including supervisor review** and shows scenario hours per week, per year, and potential labor-capacity value. Numbers are assumptions until a real pilot measures them.
+
+I commented the code and added synthetic-only unit tests and app-flow checks so these controls can be explained, reviewed, and reproduced without confidential records or paid model access. I have not verified that the new privacy filter catches every kind of protected health information or that the risk alert captures every possible violation.
+
 ## Team credit
 
 My teammates were Kevin, Jackendy, Kylee, Jack and Nelson. I have not assigned individual code ownership to them without confirmation. I do not claim to have written the entire project myself.

@@ -7,9 +7,11 @@ I kept the processing stages separate because the QA numbers, model interpretati
 | Module | What it does |
 | --- | --- |
 | `get_data.py` | Loads nine invented QA records by default. With explicit authorization switches, it can read local Excel exports and apply limited masking. It computes the rates in Python. |
+| `security_controls.py` | Applies a second regex-based pass to all nested model-facing strings. Separately identifies scored identity/privacy compliance failures for urgent in-app human review. |
+| `business_impact.py` | Computes editable supervisor preparation hours per week/year and corresponding hypothetical labor-capacity value. |
 | `prompts.py` | Renders the metrics/evidence into a JSON-constrained diagnosis prompt and a separate prompt for each selected coaching module. |
 | `harness_client.py` | Builds `InvokeHarness` requests, handles streamed text/tool events, and gives common failures actionable messages. It reuses one string session ID for related requests. |
-| `pipeline.py` | Validates JSON, matches record IDs/behaviors/quotes, excludes unverified records from training prompts, checks required training fields, applies supervisor edits, requests training, performs structural alignment checks, and optionally saves results. |
+| `pipeline.py` | Enforces the final pre-AWS sanitization boundary for both prompts and tool payloads, validates JSON, matches citations, excludes unverified records from training, applies supervisor edits, requests training, checks alignment, and optionally saves results. |
 | `app.py` | Presents QA data, diagnosis, review and coaching in Streamlit. Supports live, saved-run and synthetic walkthrough modes. |
 | `sample_walkthrough.py` | Provides handwritten fictional findings and modules for an AWS-free public demonstration. |
 | `main.py` | Supports offline checks and an explicitly requested live terminal run. |
@@ -18,14 +20,16 @@ I kept the processing stages separate because the QA numbers, model interpretati
 
 | Stage | Input and decision | Output |
 | --- | --- | --- |
-| **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations | Behavior metrics, agent-date proxy counts, evidence rows |
-| **2. AI diagnosis** | The harness processes selected evidence and structured prompts | Proposed root causes, cited records, intervention suggestions and citation checks |
-| **3. Supervisor review** | A manager or supervisor can edit the cause, intervention, notes, and training selection | Reviewed findings; excluded findings do not generate modules |
+| **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations. An interactive calculator models potential time savings with adjustable assumptions. | Behavior metrics, agent-date proxy counts, evidence rows, and hypothetical business case |
+| **2. AI diagnosis** | `build_safe_model_payload()` and `sanitize_model_prompt()` mask recognized identifiers before the authorized harness sees the data, including in tool responses. | Proposed root causes, cited records, intervention suggestions and citation checks |
+| **3. Supervisor review** | A Python rule immediately flags failed `CO` identity/privacy items, independently of model conclusions. A manager can edit the cause, intervention, notes, and training selection. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
 | **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
 
 The [main README](../README.md#how-the-application-works) illustrates the four stages. I also keep a [full-size SVG](architecture-flow.svg) and its editable [Graphviz source](architecture-flow.dot) here.
 
 The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
+
+The sanitization happens **between intake and model invocation**, with a second pass on the final coaching prompt because supervisor notes may be added later. The immediate compliance flag runs on deterministic scored fields; it is an on-screen request for review, not a verified breach or an external incident notification. The labor calculator shows possible capacity (not actual payroll savings), including the human effort still required to review AI materials.
 
 ## Verification details
 

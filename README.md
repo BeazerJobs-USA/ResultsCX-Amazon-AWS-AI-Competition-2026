@@ -8,7 +8,7 @@ Our team built **Agent QA Review** to connect those steps. Python measures which
 
 **The value is the handoff:** one reviewed QA problem can travel from evidence to a specific practice activity without a supervisor having to assemble every training element from scratch. That lets the supervisor focus on deciding what the evidence means, checking the recommendation, and coaching the employee rather than starting each lesson plan from a blank page.
 
-**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review · tailored practice modules · explicit private-data controls · **30 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
+**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review and compliance flags · tailored coaching and branching scripts · pre-model personal-data masking · interactive business impact calculator · **39 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
 
 [![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
 
@@ -17,6 +17,16 @@ Our team built **Agent QA Review** to connect those steps. Python measures which
 I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with teammates Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
 
 This repository presents the competition application, the product idea behind it, the code I contributed to and later refined, and a public walkthrough that can be reviewed without ResultsCX data.
+
+## The story in 90 seconds
+
+Consider a customer-service representative who discusses a healthcare member's account before completing identity verification. The QA score captures the missed control, but a score alone doesn't teach the employee how to handle the next call. A supervisor still needs to examine the comments, determine what went wrong, and build a focused lesson and practice conversation.
+
+**Agent QA Review closes that gap.** Python calculates QA patterns; an added privacy checkpoint masks recognizable personal identifiers before prompts or tool responses reach Bedrock. The AI drafts an evidence-linked diagnosis, but the supervisor checks it, changes the recommendation when necessary, and chooses what to coach. Failed identity/privacy controls also appear as **immediate review flags** independent of the AI's answer. Once a finding is approved, the workflow creates a coaching objective, a quiz, a guided exercise, and a branching practice script.
+
+The last question is business impact: *how much supervisor preparation time could that save?* An interactive calculator lets the operator change weekly volume, manual time, AI-assisted time **including review**, labor cost, and working weeks. For example, **40 packages/week at 30 vs. 18 minutes** could free **8 supervisor hours/week**, or **400 hours/year**, valued at **$18,000/year** using a hypothetical $45/hour loaded rate. These are scenario assumptions—not observed savings, avoided fines, or a claim of reduced HIPAA incidents.
+
+The product idea is simple: **identify a missed behavior, protect the data, escalate sensitive failures, let a human decide, and turn the decision into useful practice—with a transparent estimate of its possible value.**
 
 ## The core idea
 
@@ -107,7 +117,7 @@ The potential organizational value has three parts:
 2. **More specific practice:** focus a coaching session on the recorded behavior instead of automatically assigning a broad refresher course.
 3. **Reviewable decisions:** preserve which QA finding led to the proposed intervention and what the supervisor approved.
 
-The concept mockups include a labor-cost illustration to show how a business case **could** be estimated. A defensible estimate would compare measured preparation time before and after using the workflow, multiply any time difference by the number of cases and an appropriate loaded labor rate, and account for the time supervisors still spend reviewing AI output. That analysis has **not** been implemented or validated as a live savings calculator in this repository. No real labor savings, defect reduction, or production performance have been measured here.
+The app now includes an **interactive, assumptions-based business calculator** on the first screen. It compares manual preparation hours with AI-assisted preparation **including human review**, calculates hours potentially freed per week/year, and translates that time into an estimated labor-capacity value. The editable example uses 40 packages/week, 30 vs. 18 minutes each, 50 working weeks, and $45/hour; that produces 400 hours and $18,000/year. It also shows a negative result when the assisted process is slower. A defensible *real* estimate would measure preparation time before and after an authorized pilot and validate the case volume, labor rate, and changes in quality outcomes. No real labor savings, defect reduction, or production performance have been measured here.
 
 The project therefore demonstrates the workflow that could create value, together with a way to evaluate that value in a future authorized pilot. It does not claim that other QA products lack coaching features or that this prototype has already outperformed them.
 
@@ -119,14 +129,14 @@ The [full-size architecture diagram](https://raw.githubusercontent.com/BeazerJob
 
 | Stage | What happens |
 | --- | --- |
-| **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The public walkthrough uses invented records. |
-| **2. AI diagnosis** | Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks the citations against the loaded records instead of accepting them at face value. |
-| **3. Supervisor review** | A supervisor or manager can read the evidence, adjust the root cause and intervention, add notes, and include or exclude findings. Escalation can be recommended, but the app does not dispatch operational tasks. |
+| **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The first screen also provides an interactive labor-hours calculator. The public walkthrough uses invented records. |
+| **2. AI diagnosis** | A second sanitization checkpoint scrubs recognizable personal identifiers from the AI payload and final prompt before Bedrock can receive them; the tool callback uses the same safe payload. Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks citations against loaded records. |
+| **3. Supervisor review** | Python rules immediately highlight failed identity/privacy compliance items for human attention, regardless of the model's conclusion. A supervisor can adjust the root cause and intervention, add notes, and include or exclude findings. The alert is in-app only; no external task is dispatched. |
 | **4. Coaching and practice** | Selected findings become targeted instruction, a behavior-specific knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment, including whether the quiz references the target behavior, and can save results for read-only replay. |
 
-The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training.
+The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training. Compliance flags are rule-based **potential risks**, not verified incidents or declarations of legal violations.
 
-`get_data.py` prepares records and calculates defect rates. `prompts.py` defines the diagnosis and coaching instructions. `harness_client.py` is the AWS boundary and parses the streamed AgentCore response. `pipeline.py` verifies citations, attaches Python-calculated metrics, manages reviewed findings, and checks whether generated modules contain expected elements. `app.py` brings the stages together in Streamlit. `main.py` provides terminal checks.
+`get_data.py` prepares records and calculates defect rates. `security_controls.py` performs a second, recursive privacy pass and detects potential critical compliance failures from scored records. `prompts.py` defines the diagnosis and coaching instructions. `harness_client.py` is the AWS boundary and parses the streamed AgentCore response. `pipeline.py` enforces privacy on final prompts and AI tool payloads, verifies citations, attaches metrics, manages reviewed findings, and checks generated modules. `business_impact.py` calculates hypothetical labor hours and cost scenarios. `app.py` brings the stages together in Streamlit. `main.py` provides terminal checks.
 
 This is a **multi-stage AI workflow**, with a human review step. I do not describe it as six independently deployed agents because the code does not establish that.
 
@@ -139,7 +149,7 @@ This is a **multi-stage AI workflow**, with a human review step. I do not descri
 | [![Roleplay interface mockup](docs/screenshots/agent-qa-roleplay-demo.webp)](docs/screenshots/agent-qa-roleplay-demo.webp) | [![Coaching focus mockup](docs/screenshots/agent-qa-coaching-focus-demo.webp)](docs/screenshots/agent-qa-coaching-focus-demo.webp) |
 | Fictional branching dialogue, quiz and guided practice | Synthetic QA baseline, learning objective and alignment example |
 
-The working Streamlit interface uses a four-stage layout. I kept the mockups because they communicate the intended experience: a manager moves from a QA issue into coaching, a knowledge check, guided practice, and realistic roleplay while keeping the training tied to the original problem. The labor-cost tables are **illustrative business-case designs**, not a current analytics feature or proof of savings. Their exact limitations are explained in [Screenshot notes](docs/SCREENSHOTS.md).
+The working Streamlit interface uses a four-stage layout. I kept the mockups because they communicate the intended experience: a manager moves from a QA issue into coaching, a knowledge check, guided practice, and realistic roleplay while keeping the training tied to the original problem. The labor-cost numbers **inside those mockups** are illustrations, not proof of savings. The **actual app now has a separate working, editable business impact calculator**, whose result changes with the assumptions entered. The images' limitations are explained in [Screenshot notes](docs/SCREENSHOTS.md).
 
 ## Healthcare privacy and security design
 
@@ -150,6 +160,8 @@ Because the use case can involve healthcare member service data, confidentiality
 | **Synthetic data by default** | The public walkthrough runs without real customer, member, or employee records. |
 | **Employee pseudonyms** | The private data path replaces known employee identities with codes before model use. |
 | **Identifier masking** | The parser masks several common patterns such as emails, phone numbers, dates, provider references, and long identifiers. |
+| **Pre-model sanitization checkpoint** | `security_controls.py` scrubs nested payload text and final training/diagnosis prompts, including recognizable emails, phones, SSNs, labeled account/member IDs, dates, and configured staff names. Bedrock's data tool uses the same filtered payload. |
+| **Immediate in-app compliance flags** | In Supervisor Review, failed Compliance evaluations mentioning identity verification or privacy are visibly flagged using Python rules, before approval and independently of AI generation. No external notification is sent. |
 | **Private data read gate** | Private QA files are not read unless an explicit configuration switch is enabled. |
 | **Cloud send gate** | The private data path is blocked from being sent to AWS unless a separate explicit authorization switch is enabled. |
 | **Private output storage gate** | Derived private JSON is not written locally unless a separate storage switch is enabled. |
@@ -174,7 +186,7 @@ My contribution focused on helping turn the team's idea into a working technical
 5. **Data processing:** I investigated retrieval and parsing issues in `get_data.py` and helped connect the extracted evidence to the analysis stages.
 6. **Prompt design:** I wrote and revised instructions separating observed evidence from inferred causes, structured JSON responses, supervisor review, and targeted training content.
 
-I also worked on the privacy and security side of the application because the healthcare member service use case can involve sensitive information. The current public code keeps credentials outside source code, uses pseudonyms in the private data path, masks several common identifier patterns, and requires explicit controls before private QA data can be read, sent to AWS, or saved as derived output. These are **HIPAA aware confidentiality controls**, not a claim of HIPAA compliance. The masking is not certified de identification and saved JSON is not encrypted.
+I also worked on the privacy and security side of the application because the healthcare member service use case can involve sensitive information. The current public code keeps credentials outside source code, uses pseudonyms in the private data path, masks several common identifier patterns, and requires explicit controls before private QA data can be read, sent to AWS, or saved as derived output. In a later portfolio revision, I added **`security_controls.py`, a second sanitization layer at the Bedrock boundary, deterministic identity/privacy flags in Supervisor Review, and offline tests for both**. I also added the business calculator. These are **HIPAA aware confidentiality controls**, not a claim of HIPAA compliance. The masking is not certified de identification and saved JSON is not encrypted.
 
 I worked with the team; I did not write every part of the application by myself. The September competition prototype and this later, public-safe cleanup are separate pieces of work.
 
@@ -235,7 +247,7 @@ I run the offline tests with:
 python -m unittest discover -s tests -v
 ```
 
-**30 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, the Boto3 request shape, supervisor-to-training flow, actual Streamlit script progression, replay behavior, citation checks, behavior-matched quiz examples, incomplete-module rejection, and private-data access guards. They do **not** invoke AWS or use confidential ResultsCX workbooks. The live harness connection requires separate authorized testing.
+**39 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, the Boto3 request shape, supervisor-to-training flow, actual Streamlit script progression, replay behavior, citation checks, behavior-matched quiz examples, incomplete-module rejection, private-data access guards, pre-model identifier masking, compliance-alert rules, and business-math scenarios. They do **not** invoke AWS or use confidential ResultsCX workbooks. The live harness connection requires separate authorized testing.
 
 The dashboard examples use invented cases. No post-training QA comparison has been supplied, so I don't claim an actual reduction in defects or real labor savings. This is a student competition project, not a deployed ResultsCX system.
 
@@ -258,6 +270,8 @@ Those are the competition's rubric weights, **not our awarded scores**. I have n
 app.py                     Streamlit dashboard
 main.py                    Terminal check and live runner
 get_data.py                Synthetic/private data loading and deterministic metrics
+security_controls.py       Pre-model identifier masking and compliance alert rules
+business_impact.py         Interactive calculator's scenario math
 prompts.py                 Diagnosis and coaching instructions
 harness_client.py          Boto3 InvokeHarness integration and stream parsing
 pipeline.py                Citations, supervisor handoff, generation and alignment

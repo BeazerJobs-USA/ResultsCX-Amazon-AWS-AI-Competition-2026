@@ -59,7 +59,7 @@ def check_config():
 
 def dry_run():
     data = get_data.get_all_data()
-    payload = get_data.build_model_payload(data)
+    payload = pipeline.build_safe_model_payload(data)
     prompt = prompts.build_diagnosis_prompt(payload)
     get_data.assert_no_real_names(prompt, data)
     print(
@@ -197,7 +197,7 @@ def main():
         )
 
         session = HarnessSession(
-            tools={"get_all_data": lambda **kw: get_data.build_model_payload(data)}
+            tools={"get_all_data": lambda **kw: pipeline.build_safe_model_payload(data)}
         )
         print(
             f"Stage 2: asking Bedrock for the needs analysis (session {session.session_id[:8]}...) ..."
