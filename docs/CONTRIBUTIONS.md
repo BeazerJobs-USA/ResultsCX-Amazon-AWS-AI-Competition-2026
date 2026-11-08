@@ -1,6 +1,6 @@
 # My contributions and development notes
 
-I'm George Beazer, a senior cybersecurity student at KSU. This was a six-person academic competition project. I did the technical architecture and integration work described below, while other teammates also contributed to the application and presentation.
+I'm George Beazer, a senior cybersecurity student at KSU. This was a six person academic competition project. I assisted with coding, troubleshooting, AWS integration, data handling, the Streamlit graphical interface, prompt workflow, and security minded handling of sensitive data. Other teammates also contributed to the application and presentation, and I do not claim to have written the entire project.
 
 | Area | What I worked on | Relevant code |
 | --- | --- | --- |
@@ -9,9 +9,9 @@ I'm George Beazer, a senior cybersecurity student at KSU. This was a six-person 
 | UI | Built and debugged how QA findings, supervisor input and training sections move through Streamlit | `app.py` |
 | Data | Investigated Excel retrieval and data-processing issues | `get_data.py` |
 | Prompt design | Developed the stage-specific instructions and supervisor handoff logic | `prompts.py`, `pipeline.py` |
-| Security-minded development | Worked on separating local configuration, keeping names out of model prompts, and checking the data being submitted | `.env.example`, `get_data.py`, `pipeline.py` |
+| Security and confidentiality | Worked on separating local configuration, pseudonymizing names, masking common identifiers, gating private data reads and cloud sends, and checking the data being submitted | `.env.example`, `get_data.py`, `pipeline.py`, `.gitignore` |
 
-Later code revisions added synthetic sample data, tighter citation checks, and an offline walkthrough. Those changes are separate from the work completed during the two-day competition.
+Later code revisions added synthetic sample data, tighter citation checks, private data access guards, and an offline walkthrough. Those changes are separate from the work completed during the two day competition. The privacy controls reflect healthcare confidentiality and HIPAA aware design concerns, but they are not a claim that the prototype is HIPAA compliant.
 
 ## Team credit
 
