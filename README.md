@@ -149,7 +149,7 @@ requirements.lock          Tested Python 3.12 versions
 
 ## Team and next steps
 
-My teammates were **Kevin, Jackendy, Kylee, Jack and Nelson**. We worked on the same competition project, and I have kept the contributions I can personally account for separate from the team's overall work.
+My teammates were **Kevin Jackendy, Kylee, Jack Nelson**. We worked on the same competition project, and I have kept the contributions I can personally account for separate from the team's overall work.
 
 The next steps are to capture the current Streamlit workflow, finish authorized testing against the live AWS harness, and compare the coaching output with actual follow-up QA results if those become available.
 
