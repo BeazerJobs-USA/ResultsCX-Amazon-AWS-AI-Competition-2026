@@ -1,56 +1,38 @@
-# Security Practices and Publication Checklist
+# Security and data-handling notes
 
-## Scope
+I designed the public version so a recruiter can run the synthetic example without company records or AWS access. The original code's masking was useful but limited. I made that distinction explicit because a regex-based scrubber does not prove that all personal information has been removed.
 
-This project touches simulated healthcare-related customer-service QA workflows. That raises security and privacy considerations even in an academic prototype. The material below is a **control checklist and design guidance**, not a verified attestation of implemented controls or HIPAA compliance.
+## Controls present in the public code
 
-## Configuration and credentials
-
-| Item | Expected location | Public repository rule |
-| --- | --- | --- |
-| `HARNESS_ARN` / AgentCore runtime ARN | Local process environment or approved deployment configuration | Use placeholders; do not publish account-specific resource identifiers unnecessarily |
-| AWS region | Environment or approved config | Safe to show an example region; verify real region against deployment |
-| `AWS_PROFILE` | Local environment/profile config | Name only; never copy the profile's credential files |
-| AWS access key, secret key, session token | AWS CLI/SDK provider chain, temporary role, or identity federation | Never commit or screenshot values |
-| ResultsCX spreadsheets and source evidence | Authorized private storage only | Do not publish without written clearance and full redaction |
-| Generated outputs and app logs | Controlled local or approved storage | Exclude raw cases, identities, prompts, and confidential content |
-
-The `.gitignore` excludes `.env`, local credential files, private data directories, logs, and common spreadsheet exports. **A `.gitignore` is not a security boundary**: it does not remove information already committed and does not replace a pre-push inspection.
-
-## Secure data flow
-
-1. **Minimize input:** supply the model with only fields necessary for diagnosis. Replace names, member numbers, phone numbers, and medical detail with controlled synthetic placeholders.
-2. **Validate before invocation:** check required keys and expected numeric ranges. Do not accept arbitrary model-produced values as verified measurements.
-3. **Constrain permissions:** authorize `bedrock-agentcore:InvokeAgentRuntime` only for the approved runtime ARN when possible; inspect policy boundaries with the account owner.
-4. **Separate sources:** preserve QA evidence, model inference, human supervisor decision, and generated coaching as distinct records.
-5. **Handle failures safely:** return actionable but nonsensitive errors; never print credentials, raw PII, or full HTTP payloads in console traces.
-6. **Verify output:** treat generated scripts as training drafts that need subject-matter review before use.
-7. **Review retention:** saved-run JSON or caches may contain sensitive content. Do not assume locally saved output is encrypted; apply appropriate controls or use synthetic-only data.
-
-## Current assurance status
-
-| Security claim | Status in this public repository |
+| Area | What I can point to |
 | --- | --- |
-| Config examples avoid embedded secrets | **Present in reference code and templates** |
-| Private data and common secret files ignored | **Present in `.gitignore`** |
-| Reference validator checks schema and ranges | **Present in `examples/`** |
-| IAM least privilege configured on AWS account | **Not independently verified** |
-| Private runtime inputs encrypted at rest | **Not independently verified** |
-| Fernet or application-layer encryption implemented | **Not verified; do not claim** |
-| Production HIPAA controls/compliance | **Not established; do not claim** |
-| Full original application dependency or penetration tests | **Not available in this public release** |
+| Public data | `sample_data/synthetic_qa.json` contains invented evaluation records and no real member or employee names. |
+| Input selection | `QA_DATA_SOURCE` defaults to `synthetic`; reading local private workbooks requires `QA_DATA_SOURCE=private` and `ALLOW_PRIVATE_QA_READ=1`. |
+| Cloud transmission | `pipeline.ensure_cloud_upload_authorized()` checks reported integrity failures and blocks the private-data path unless `ALLOW_PRIVATE_CLOUD_SEND=1` is set. |
+| Local outputs | Diagnosis, approval, and training JSON are saved for synthetic runs. Private derived output is not written unless `ALLOW_PRIVATE_OUTPUT_STORAGE=1`. |
+| Credential handling | `harness_client.py` reads `HARNESS_ARN` from the local environment and lets Boto3 resolve credentials using its provider chain. |
+| Version control | `.gitignore` excludes `.env`, credentials, company workbooks, real-name lists, logs and `outputs/`. |
+| Evidence checks | `pipeline.py` checks record ID, behavior, and quoted text before marking a diagnosis citation verified. |
 
-## Before publishing original competition source
+## Limits and risks
 
-- [ ] Verify that the team and organizers authorize distribution of the source and visuals.
-- [ ] Remove ResultsCX-only documents, QA workbooks, notes, and other NDA material.
-- [ ] Rotate any credentials that were ever copied into files or commit history.
-- [ ] Run secret scanning and inspect the entire new commit diff, including notebooks and media metadata.
-- [ ] Substitute sanitized, explicitly synthetic fixtures for actual member or employee records.
-- [ ] Document tested IAM permissions, app configuration, and dependency versions without exposing values.
-- [ ] Add real tests and execution evidence before claiming verified defenses or measured outcomes.
+1. **Privacy:** The optional private parser pseudonymizes employee names and masks some common identifier patterns. It cannot detect every name, relationship, identifier, or sensitive statement. There is no certified de-identification process.
+2. **Confidentiality:** Original ResultsCX workbooks and the real-name list were left out. I would need permission and a full human review before using any restricted material outside its approved environment.
+3. **Storage:** Saved JSON is ordinary plaintext. I have not implemented or verified Fernet encryption, encrypted local storage, or secure enterprise retention.
+4. **IAM:** AWS docs state an InvokeHarness caller may need both `bedrock-agentcore:InvokeHarness` and `bedrock-agentcore:InvokeAgentRuntime`. I cannot verify the team's deployed policy from this source ZIP. Least privilege remains a deployment responsibility.
+5. **Model content:** A response can still be inaccurate or unsafe even if its JSON parses. A validated citation is not proof that the inferred root cause is correct. Human review remains essential.
+6. **Regulation:** I am not claiming HIPAA compliance or authorization to process actual protected health information.
 
-If credentials are accidentally published, treat them as compromised and revoke/rotate them immediately. Deleting a file in a later commit alone does **not** remove the leaked value from history.
+The three private-data switches are deliberate friction, **not permission**. An authorized owner must still decide whether the input, AWS account, contract, and retention policy are appropriate.
 
-Primary references: [AWS Boto3 credentials](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html) and [Bedrock AgentCore Runtime sessions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-sessions.html).
+## Before allowing a private-data run
+
+- Confirm in writing that the specific dataset and cloud processing are permitted.
+- Check the full input and prompt for names, account IDs, member details, provider data, and proprietary instructions.
+- Use temporary AWS credentials or an approved profile; do not paste keys into code or Git.
+- Review IAM access to the particular harness and underlying runtime.
+- Decide whether derived JSON may be stored. If not, leave `ALLOW_PRIVATE_OUTPUT_STORAGE` unset.
+- Recheck any exported Markdown/JSON before sharing it beyond the authorized team.
+
+Reference: [AWS AgentCore harness permissions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-security.html) and [Boto3 credential providers](https://docs.aws.amazon.com/boto3/latest/guide/credentials.html).
 

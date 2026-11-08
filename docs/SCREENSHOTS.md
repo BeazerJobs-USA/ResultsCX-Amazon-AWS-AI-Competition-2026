@@ -1,27 +1,20 @@
-# Dashboard Visuals: Provenance and Captions
+# Screenshot notes
 
-These two illustrations were supplied by a competition participant for public presentation. Both feature **synthetic customer-service QA examples**. Their provenance as unmodified captures of the original source code is **not independently verified** in this public release. Treat them as interface illustrations, not proof of live model invocations.
+I kept the two supplied application images because they communicate the intended coaching experience. They are **illustrative mockups**, not verified captures from the current source code. The running Streamlit implementation has four stages and a different layout. I don't want a reviewer to assume the code renders an identical screen.
 
-## 1. Roleplay and Guided Practice
+## Roleplay concept
 
-![Roleplay and guided practice demo](screenshots/agent-qa-roleplay-demo.webp)
+![Illustrative roleplay screen](screenshots/agent-qa-roleplay-demo.webp)
 
-**Caption:** Agent QA Review, Case F2 (documentation accuracy). This illustrative screen shows saved-run demo recovery, a supervisor-confirmation badge, fictional member/agent branching roleplay, knowledge-check choices, guided practice criteria, and a simulated labor cost calculation.
+This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. The baseline and labor amounts are synthetic. Its post-training evaluation is pending.
 
-**Limitations:** The screen identifies synthetic data, flags fictional practice and supervisor review, and marks the post-training comparison **PENDING**. The 14% baseline and labor figures are demonstrations, not verified ResultsCX performance measures or actual financial savings.
+## Coaching and alignment concept
 
-## 2. Coaching Focus and Alignment Check
+![Illustrative coaching screen](screenshots/agent-qa-coaching-focus-demo.webp)
 
-![Coaching focus and alignment demo](screenshots/agent-qa-coaching-focus-demo.webp)
+This concept image shows a fictional Case F1 verification problem, a learning objective, an alignment table, and a simulated training-time cost. The visible desktop date is not evidence of when the 2026 competition occurred.
 
-**Caption:** Agent QA Review, Case F1 (incomplete HIPAA verification). The illustration shows a coaching learning objective, suggested discussion points, an alignment check, an illustrative 18% defect baseline, and an example training labor calculation.
+## What I want to add next
 
-**Limitations:** The screenshot explicitly labels its source **SYNTHETIC QA DATA**, identifies its model mode as a saved run, and marks post-training comparison **PENDING**. The displayed desktop date/time is not evidence of the September 2026 competition date. The term “HIPAA verification” describes a fictional scenario; this is **not evidence of legal or regulatory compliance**.
-
-## Public portfolio rules
-
-1. Never replace these images with invented “real production” screenshots.
-2. If genuine screenshots from the approved live application become available, add them separately with exact date, source revision, synthetic-data status, and redaction note.
-3. Avoid exposing real member identifiers, QA spreadsheets, results, access tokens, account IDs, or company-only material.
-4. Keep demo math labeled as assumed or simulated; publish measured results only with defensible methodology and permission.
+A genuine capture of the public Streamlit walkthrough, with the exact code revision, capture date, and **SYNTHETIC** label. Until then, the mockups remain clearly separated from verified runtime evidence. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings.
 

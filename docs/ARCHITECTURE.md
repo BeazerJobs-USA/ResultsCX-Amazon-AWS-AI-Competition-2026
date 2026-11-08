@@ -1,67 +1,48 @@
-# Architecture and Evidence Boundaries
+# Architecture notes
 
-## Purpose
+I kept the processing stages separate because the QA numbers, model interpretation, supervisor judgment, and training output should not be treated as the same kind of evidence.
 
-The competition concept connects a QA observation to a supervisor-reviewed diagnosis, then to focused training content. The architecture below is reconstructed from participant descriptions and the user-provided dashboard visuals. The original application source has not yet been published in this repository.
+## What the code does
 
-## Intended processing stages
+| Module | My reading of its responsibility |
+| --- | --- |
+| `get_data.py` | Loads nine invented QA records by default. With explicit authorization switches, it can read local Excel exports and apply limited masking. It computes the rates in Python. |
+| `prompts.py` | Renders the metrics/evidence into a JSON-constrained diagnosis prompt and a separate prompt for each selected coaching module. |
+| `harness_client.py` | Builds `InvokeHarness` requests, handles streamed text/tool events, and gives common failures actionable messages. It reuses one string session ID for related requests. |
+| `pipeline.py` | Validates JSON, matches record IDs/behaviors/quotes, applies supervisor edits, requests training, performs structural alignment checks, and optionally saves results. |
+| `app.py` | Presents QA data, diagnosis, review and coaching in Streamlit. Supports live, saved-run and synthetic walkthrough modes. |
+| `sample_walkthrough.py` | Provides handwritten fictional findings and modules for an AWS-free public demonstration. |
+| `main.py` | Supports offline checks and an explicitly requested live terminal run. |
 
-| Stage | Input | Output | Review / failure boundary |
-| --- | --- | --- | --- |
-| 1. Ingest | Sanitized QA worksheet or case | Normalized evidence fields | Reject missing or unexpected fields; no confidential data in the public repo |
-| 2. Diagnose | QA evidence and prompt instructions | Evidence-linked issue, uncertainty and proposed cause | Model output is a hypothesis until checked |
-| 3. Supervisor validation | Proposed diagnosis | Confirm, amend, or reject | Human approval is required by the intended workflow |
-| 4. Coach | Confirmed gap | Focus, learning objectives, coaching conversation | Require correspondence to confirmed issue |
-| 5. Practice | Approved coaching goal | Quiz, guided practice, scenario, roleplay | Fictional scripts must be labeled as practice, not company policy |
-| 6. Evaluate | Training artifacts and baseline | Alignment checks and pending follow-up | Estimated labor impact is not observed savings |
+```mermaid
+flowchart TD
+    A["QA input and Python statistics"] --> B["Evidence-based diagnosis"]
+    B --> C{"Reviewer decision"}
+    C -->|Edit or reject| B
+    C -->|Select findings| D["Coaching modules"]
+    D --> E["Citation and structural alignment checks"]
+```
 
-The team described this as a **multi-agent supervisor pipeline**. That wording is an architectural pattern for staged tasks; this release does not establish that six separately deployed Bedrock agents communicated independently.
+The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
 
-## Component responsibility map
+## Verification details
 
-| Described original module | Intended responsibility | Publicly verified in this repo? |
-| --- | --- | --- |
-| `app.py` | Streamlit UI and session state | No; screenshots only |
-| `main.py` | Main run flow and Boto3 session ID correction | No; participant-reported fix |
-| `get_data.py` | Workbook parsing and QA data retrieval | No; participant-reported fix |
-| `prompts.py` | Model task instructions | No; design description only |
-| `pipeline.py` | Stage orchestration and supervisor checkpoint | No; design description only |
-| `harness_client.py` | Centralized AWS runtime invocation | No; suggested module boundary |
-| `labor_cost.py` | Explicit assumption-driven scenario calculations | No; illustrative figures visible |
+I changed citation validation because the original implementation treated an existing record ID as verified even when it belonged to a different QA behavior. It also did not verify that the model's quoted words actually appeared in the record.
 
-The [reference Bedrock client](../examples/bedrock_agentcore_reference.py) is an independently authored demonstration of the documented SDK contract. It does not purport to be the original code.
+Now the diagnosis check requires all three:
 
-## AWS boundary
+1. The record ID exists.
+2. The record is for the same scored behavior and section.
+3. The quoted phrase appears in the stored evaluator comment after whitespace/case normalization.
 
-For an authorized AgentCore Runtime deployment:
+For training-module references, the validator checks that a cited ID exists and belongs to the right behavior. The separate alignment function uses simple keyword overlap and checks for an objective, scenario, roleplay, and scoring criteria. **That is a heuristic**, not a semantic assessment or measured learning outcome.
 
-1. The operating system supplies the ARN/region and Boto3 discovers AWS credentials through its provider chain.
-2. The app constructs a JSON payload from **sanitized** input.
-3. Boto3 calls `bedrock-agentcore.invoke_agent_runtime` with `agentRuntimeArn`, `runtimeSessionId` as a **string**, `contentType`, and bytes `payload`.
-4. The application checks the response and handles errors without dumping raw input or secrets into logs.
-5. The UI renders analysis with the human-review boundary intact.
+## What I cannot verify from this release
 
-Do not send live ResultsCX datasets to a runtime without written authorization, an approved account, necessary privacy review, and appropriate access controls.
+- Live AWS credentials, permissions, and the deployed harness. The tests validate the Boto3 request against the SDK service model with a fake client; they do not contact AWS.
+- The original September demonstration's runtime state or deployment configuration. The supplied ZIP is one code snapshot, not a complete historical commit trail.
+- Production privacy controls. The private-data scrubber uses regexes and known names, which can miss identifiers. The public walkthrough avoids this by using invented records.
+- Training effectiveness. The screenshots show pending or simulated values, and no measured post-training data is available.
 
-## Evidence-versus-claim matrix
-
-| Claim | Available evidence | Appropriate wording |
-| --- | --- | --- |
-| Streamlit interface was designed and demonstrated | Two user-supplied dashboard images | “Dashboard demonstration visuals show…” |
-| Saved-run recovery exists in the demonstrated UI | Saved-run control shown in images | “The pictured demo includes a saved-run mode” |
-| AWS invocation occurred during a specific screenshot | Not demonstrated by the image | “The team reported AWS integration; invocation not independently verified here” |
-| UUID casting issue was resolved | Contributor technical account | “George reports fixing the `runtimeSessionId` type mismatch” |
-| A supervisor approved a real case | Images use synthetic data and demo confirmation | “Demo indicates a supervisor confirmation checkpoint” |
-| Training lowered defects | Screenshots say follow-up pending | **Do not claim improvement** |
-| System was HIPAA compliant or encrypted | No control implementation evidence in this public release | **Do not claim compliance or encryption** |
-| Team won or achieved a numerical score | No score sheet supplied | **Do not claim award, placement or scores** |
-
-## Evidence still needed for stronger portfolio claims
-
-- Sanitized original source files and traceable commits, with team consent and intellectual-property review.
-- Reproducible install with locked dependency versions and a synthetic dataset.
-- Minimal unit tests for input validation, transformations, and type-safe runtime session IDs.
-- A real video or screen recording of the application running locally, labeled with actual recording date.
-- AWS invocation proof with sensitive account IDs, ARNs, request/response bodies, and credentials redacted.
-- Before/after QA data if outcomes are ever measured, including sample size and comparison period.
+These boundaries help me explain what was actually built without promising more than the code shows.
 

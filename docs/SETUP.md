@@ -1,63 +1,53 @@
-# Local Development Setup (Windows 11)
+# Setup and usage
 
-This is the **intended developer workflow** based on participant notes. The original application code and dependency lockfile have **not** been released here, so these commands are a preparation guide and will **not** launch the complete app until the source is added.
+I built this project on Windows 11 with VS Code and Python. I verified the public build with Python 3.12 and `requirements.lock`. The public mode can run without an AWS account.
 
-## Prerequisites
-
-- Windows 11, VS Code, Git, and Python supported by the eventual release.
-- [`uv` Python package/environment manager](https://docs.astral.sh/uv/).
-- An approved AWS account/identity and access to the specific Bedrock AgentCore runtime if using real inference.
-- Written authorization before using any ResultsCX materials or proprietary workloads.
-
-## Setup
+## Windows 11 with uv
 
 ```powershell
 git clone https://github.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026.git
 cd ResultsCX-Amazon-AWS-AI-Competition-2026
 
-uv venv
+uv venv --python 3.12
 .\.venv\Scripts\Activate.ps1
+uv pip install -r requirements.lock
 
-# Illustrative dependency list; install from a future reviewed lockfile when available.
-uv pip install streamlit boto3 openpyxl pandas requests
-
-# Select the .venv Python interpreter in VS Code.
-python --version
-python -c "import boto3, pandas, openpyxl, requests, streamlit; print('Imports OK')"
-```
-
-### Environment configuration
-
-- `.env.example` documents nonsecret configuration names but does **not** automatically load into `os.environ`.
-- Set environment values in the current PowerShell session or in a securely managed launch configuration.
-- Prefer `aws configure sso` or approved short-lived IAM credentials. Boto3 resolves credentials from its usual provider chain.
-- Configure `HARNESS_ARN` with the actual authorized Runtime ARN only in the local environment. Do **not** publish it or copy credential material into source.
-
-```powershell
-$env:AWS_PROFILE = "your-approved-profile"
-$env:AWS_DEFAULT_REGION = "us-east-1"  # Example; use actual deployment region
-$env:HARNESS_ARN = "arn:aws:bedrock-agentcore:REGION:ACCOUNT:runtime/APPROVED-RUNTIME"
-```
-
-Once the team publishes approved source including `app.py`, the expected UI command is `streamlit run app.py`. Until then, only the isolated examples/tests in this repository can be exercised.
-
-## Frequent debugging lessons from the competition
-
-| Symptom | Check |
-| --- | --- |
-| `ModuleNotFoundError` | Is VS Code using the `.venv` interpreter? Were packages installed into that environment? |
-| File not found for workbook | Check working directory and paths; never solve by uploading restricted input data |
-| `runtimeSessionId` parameter type issue | Pass `str(uuid.uuid4())`, not a `uuid.UUID` object |
-| AWS access failure | Confirm correct profile, role permissions, region, and runtime; avoid printing resolved credentials |
-| Model call works, UI content stale | Inspect Streamlit session-state transitions and data structure passed to renderer |
-| No AWS access after event | Use sanitized saved-run content; clearly mark that mode as offline demonstration |
-
-## Testing reference code
-
-The current repository includes only educational reference examples. Without access to AWS or private QA datasets, you can run:
-
-```powershell
 python -m unittest discover -s tests -v
-python -m compileall -q examples tests
+python -m streamlit run app.py
 ```
 
+The default **Synthetic walkthrough** uses `sample_data/synthetic_qa.json`. Click **Load synthetic walkthrough**, inspect the findings, then approve or edit the fictional review form to see the sample coaching modules. This is not a live generative-AI result.
+
+## Terminal checks
+
+```powershell
+python get_data.py
+python main.py --dry-run
+python main.py
+```
+
+These default to the synthetic dataset, and none of them call Bedrock. The source prints metric counts and prompt length, not raw private prompt content.
+
+## Optional live AWS mode
+
+I only use this with a harness and account the team is authorized to access:
+
+1. Copy `.env.example` to `.env` and replace the harness placeholder and profile name with approved local settings.
+2. Configure an AWS profile, IAM Identity Center, or an assumed role. Do not put access keys in Git.
+3. Keep `QA_DATA_SOURCE=synthetic` when evaluating the public example.
+4. In the UI choose **Live — call Bedrock**, or deliberately run `python main.py --live`.
+
+`HARNESS_ARN` is a **harness ARN**. The client calls `invoke_harness`, not `invoke_agent_runtime`. The current SDK contract expects `harnessArn`, a string `runtimeSessionId` and `messages`. AWS permission and region checks depend on the actual deployment.
+
+## If something breaks
+
+| Symptom | First check |
+| --- | --- |
+| Missing module | Confirm VS Code and PowerShell use `.venv`; rerun `uv pip install -r requirements.lock`. |
+| Missing synthetic data | Confirm `sample_data/synthetic_qa.json` exists and `QA_DATA_SOURCE=synthetic`. |
+| Harness ARN rejected | Replace the placeholder with the authorized harness ARN; verify the region. |
+| No AWS credentials | Use a valid profile or role. The public walkthrough requires none. |
+| Boto3 session type error | `runtimeSessionId` needs `str(uuid.uuid4())`, not a UUID object. |
+| A replay has no data | Run a new synthetic or authorized live flow to create local saved output. |
+
+The private-data path is described in [Security](SECURITY.md). I don't recommend enabling it for a public portfolio demo.

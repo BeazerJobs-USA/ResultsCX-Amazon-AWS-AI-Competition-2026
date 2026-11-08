@@ -1,0 +1,6 @@
+# Runtime packages for the public synthetic walkthrough and optional AWS mode.
+boto3>=1.43.52,<2
+openpyxl>=3.1,<4
+pandas>=2.0,<4
+python-dotenv>=1.0,<2
+streamlit>=1.50,<2

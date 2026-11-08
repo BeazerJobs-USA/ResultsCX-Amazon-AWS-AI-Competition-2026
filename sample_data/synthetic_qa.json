@@ -1,0 +1,77 @@
+{
+  "notice": "Invented records for public testing. Not derived from ResultsCX customer or employee data.",
+  "records": [
+    {
+      "record_id": "CO-001", "source": "CO", "section": "Compliance",
+      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
+      "behavior": "Confirm identity before discussing account details", "result": "No",
+      "comment": "The agent discussed a plan update before completing the required verification steps.",
+      "max_score": 1, "score": 0
+    },
+    {
+      "record_id": "CO-002", "source": "CO", "section": "Compliance",
+      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
+      "behavior": "Confirm identity before discussing account details", "result": "Yes",
+      "comment": "The agent completed verification before discussing the account.",
+      "max_score": 1, "score": 1
+    },
+    {
+      "record_id": "CO-003", "source": "CO", "section": "Compliance",
+      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
+      "behavior": "Confirm identity before discussing account details", "result": "No",
+      "comment": "The agent skipped a verification step and needed a supervisor reminder.",
+      "max_score": 1, "score": 0
+    },
+    {
+      "record_id": "BP-001", "source": "BP", "section": "Business Process",
+      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
+      "behavior": "Document the resolution and next steps accurately", "result": "No",
+      "comment": "The resolution was explained verbally but the documentation did not include the next action.",
+      "max_score": 1, "score": 0
+    },
+    {
+      "record_id": "BP-002", "source": "BP", "section": "Business Process",
+      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
+      "behavior": "Document the resolution and next steps accurately", "result": "No",
+      "comment": "The case notes omitted the requested follow-up date and responsible team.",
+      "max_score": 1, "score": 0
+    },
+    {
+      "record_id": "BP-003", "source": "BP", "section": "Business Process",
+      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
+      "behavior": "Document the resolution and next steps accurately", "result": "Yes",
+      "comment": "The agent recorded the decision and follow-up action.",
+      "max_score": 1, "score": 1
+    },
+    {
+      "record_id": "ME-001", "source": "ME", "section": "Member Experience",
+      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
+      "behavior": "Confirm understanding and next steps", "result": "Yes",
+      "comment": "The agent summarized the next action and asked for confirmation.",
+      "max_score": 1, "score": 1
+    },
+    {
+      "record_id": "ME-002", "source": "ME", "section": "Member Experience",
+      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
+      "behavior": "Confirm understanding and next steps", "result": "No",
+      "comment": "The agent ended the conversation without checking whether the next steps were clear.",
+      "max_score": 1, "score": 0
+    },
+    {
+      "record_id": "ME-003", "source": "ME", "section": "Member Experience",
+      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
+      "behavior": "Confirm understanding and next steps", "result": "Yes",
+      "comment": "The agent restated the action and confirmed the customer's understanding.",
+      "max_score": 1, "score": 1
+    }
+  ],
+  "outline": {
+    "source_file": "synthetic_qa.json",
+    "mission_statement": ["Demonstration curriculum for quality assurance coaching."],
+    "entries": [
+      {"week": "Week 1", "day": "Day 2", "topic": "Identity verification", "detail": "Confirm required identifiers before discussing account details."},
+      {"week": "Week 2", "day": "Day 3", "topic": "Documentation", "detail": "Record the resolution, next step, and follow-up owner."},
+      {"week": "Week 2", "day": "Day 4", "topic": "Communication", "detail": "Summarize the next steps and confirm understanding."}
+    ]
+  }
+}

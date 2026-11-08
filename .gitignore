@@ -15,6 +15,8 @@ __pycache__/
 *.pem
 *.key
 credentials
+user_accessKeys*
+names_to_mask.txt
 
 # Private competition data and local run outputs
 data/
