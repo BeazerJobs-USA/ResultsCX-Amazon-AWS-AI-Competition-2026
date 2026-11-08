@@ -16,7 +16,7 @@ python -m unittest discover -s tests -v
 python -m streamlit run app.py
 ```
 
-The default **Synthetic walkthrough** uses `sample_data/synthetic_qa.json`. Click **Load synthetic walkthrough**, inspect the findings, then approve or edit the fictional review form to see the sample coaching modules. This is not a live generative-AI result.
+The default **Synthetic walkthrough** always uses `sample_data/synthetic_qa.json`, regardless of any local private-data setting. Click **Load synthetic walkthrough**, inspect the findings, then approve or edit the fictional review form to see the sample coaching modules. The verification and documentation cases have different quizzes and practice scenarios. This is not a live generative-AI result.
 
 ## Terminal checks
 
@@ -48,6 +48,9 @@ I only use this with a harness and account the team is authorized to access:
 | Harness ARN rejected | Replace the placeholder with the authorized harness ARN; verify the region. |
 | No AWS credentials | Use a valid profile or role. The public walkthrough requires none. |
 | Boto3 session type error | `runtimeSessionId` needs `str(uuid.uuid4())`, not a UUID object. |
-| A replay has no data | Run a new synthetic or authorized live flow to create local saved output. |
+| A replay has no data | Complete an authorized Live-mode flow to save diagnosis, approval, and training output. The handwritten walkthrough does not create saved runs. |
+
+Replay displays a completed saved diagnosis and training package with its original recorded approval when one exists. It does not generate new modules or record a new supervisor decision. A diagnosis-only run cannot be replayed as a completed training package.
 
 The private-data path is described in [Security](SECURITY.md). I keep it disabled unless the dataset and processing environment are approved for that use.
+

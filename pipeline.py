@@ -321,12 +321,19 @@ def related_outline_entries(finding, outline, limit=12):
 
 
 def evidence_lines_for(finding, data, max_items=8):
-    """Full masked comments for the finding's cited records, plus other FAIL comments on that behavior."""
+    """Only verified, same-behavior evidence, plus other FAIL comments on that behavior."""
     records = index_records(data)
     lines, seen = [], set()
     for e in finding.get("evidence", []):
+        if not e.get("verified"):
+            continue
         rec = records.get(e.get("record_id"))
-        if rec and rec["record_id"] not in seen:
+        if (
+            rec
+            and rec["record_id"] not in seen
+            and rec["behavior"] == finding.get("behavior")
+            and rec.get("source") == finding.get("source")
+        ):
             seen.add(rec["record_id"])
             lines.append(
                 f"{rec['record_id']} | {'FAIL' if rec['result'] == 'No' else 'PASS'} | {rec['comment']}"
@@ -336,6 +343,7 @@ def evidence_lines_for(finding, data, max_items=8):
             break
         if (
             rec["behavior"] == finding.get("behavior")
+            and rec.get("source") == finding.get("source")
             and rec["result"] == "No"
             and rec["comment"].strip()
             and rec["record_id"] not in seen
@@ -343,6 +351,38 @@ def evidence_lines_for(finding, data, max_items=8):
             seen.add(rec["record_id"])
             lines.append(f"{rec['record_id']} | FAIL | {rec['comment']}")
     return "\n".join(lines[:max_items])
+
+
+def ensure_module_complete(module):
+    """Reject structurally incomplete model output before presenting it as usable training."""
+    missing = []
+    for key in ("module_title", "learning_objective", "why_this_fixes_the_gap", "delivery"):
+        if not str(module.get(key) or "").strip():
+            missing.append(key)
+    if not module.get("instruction"):
+        missing.append("instruction")
+    quiz = module.get("knowledge_check") or {}
+    options = quiz.get("options")
+    if not (quiz.get("question") and isinstance(options, list) and len(options) >= 2
+            and all(isinstance(option, str) and option.strip() for option in options)
+            and quiz.get("correct") and quiz.get("feedback")):
+        missing.append("knowledge_check")
+    exercise = module.get("hands_on_exercise") or {}
+    if not (exercise.get("trainee_instructions") and exercise.get("facilitator_instructions")
+            and isinstance(exercise.get("success_criteria"), list)
+            and exercise["success_criteria"]):
+        missing.append("hands_on_exercise")
+    scenario = module.get("simulation_scenario") or {}
+    if not (scenario.get("behavioral_target") and scenario.get("scenario_context")
+            and isinstance(scenario.get("scoring_criteria"), list)
+            and scenario["scoring_criteria"]):
+        missing.append("simulation_scenario")
+    roleplay = module.get("roleplay_script") or []
+    if len(roleplay) < 4 or not any(t.get("speaker", "").upper() == "BRANCH" for t in roleplay):
+        missing.append("roleplay_script")
+    if missing:
+        raise PipelineError("Incomplete training module: " + ", ".join(missing))
+    return module
 
 
 RECORD_ID_PATTERN = re.compile(r"\b([A-Z]{2}-\d{3})\b")
@@ -375,7 +415,13 @@ def verify_module_citations(module, finding, data):
                     "result": rec["result"],
                     "record_behavior": rec["behavior"],
                     "comment": rec["comment"],
-                    "same_behavior": rec["behavior"] == finding.get("behavior", ""),
+                    "same_behavior": (
+                        rec["behavior"] == finding.get("behavior", "")
+                        and (
+                            not finding.get("source")
+                            or rec.get("source") == finding.get("source")
+                        )
+                    ),
                 }
             )
         citations.append(item)
@@ -448,6 +494,7 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
                 prompt, system_prompt=prompts.SYSTEM_PROMPT, on_text=on_text
             )
             module = validate_module(extract_json(text), finding, data)
+            ensure_module_complete(module)
             module["_meta"] = {
                 "input_tokens": turn.input_tokens,
                 "output_tokens": turn.output_tokens,
@@ -495,8 +542,11 @@ def alignment_check(approved_findings, modules):
             (m.get("simulation_scenario") or {}).get("behavioral_target") or ""
         )
         objective = str(m.get("learning_objective") or "")
+        quiz = m.get("knowledge_check") or {}
+        quiz_text = str(quiz.get("question") or "")
         behavior_kw = _keywords(f.get("behavior", "")) if f else set()
         overlap = behavior_kw & (_keywords(target) | _keywords(objective))
+        quiz_overlap = behavior_kw & _keywords(quiz_text)
         rows.append(
             {
                 "finding_id": fid,
@@ -505,6 +555,8 @@ def alignment_check(approved_findings, modules):
                 "finding_exists": f is not None,
                 "target_matches_behavior": bool(overlap) if f else False,
                 "shared_terms": sorted(overlap),
+                "quiz_matches_behavior": bool(quiz_overlap) if f else False,
+                "quiz_shared_terms": sorted(quiz_overlap),
                 "has_objective": bool(objective.strip()),
                 "has_scenario": bool(target.strip()),
                 "has_roleplay": len(m.get("roleplay_script") or []) >= 4,
@@ -526,6 +578,8 @@ def alignment_check(approved_findings, modules):
                     "finding_exists": True,
                     "target_matches_behavior": False,
                     "shared_terms": [],
+                    "quiz_matches_behavior": False,
+                    "quiz_shared_terms": [],
                     "has_objective": False,
                     "has_scenario": False,
                     "has_roleplay": False,
@@ -563,3 +617,4 @@ def build_approved_findings(diagnosis, edits, approval_mode="human_review"):
         merged["approved_at"] = datetime.now().isoformat(timespec="seconds")
         approved.append(merged)
     return approved
+

@@ -465,16 +465,13 @@ class AppFlowTests(unittest.TestCase):
         )
         self.assertEqual(outcome, "rerun")
         self.assertEqual(state.diagnosis["summary"], "TEST FIXTURE summary")
-        st, outcome = run_app(
-            state,
-            clicks={"✅ APPROVE DIAGNOSIS — generate training automatically": True},
-            values=replay,
-        )
-        self.assertEqual(outcome, "rerun")
+        self.assertIsNotNone(state.training)
+        self.assertEqual(state.approval["approved_by"], "George")
         self.assertEqual(FakeSession.prompts, [], "replay must not call the model")
         self.assertEqual([m["finding_id"] for m in state.training["modules"]], ["F1"])
         st, outcome = run_app(state, values=replay)
         self.assertIn("REPLAY", drawn(st, "info"))
+        self.assertNotIn("APPROVE DIAGNOSIS", drawn(st, "button"))
 
     def test_missing_config_is_explained_not_crashed(self):
         import os
@@ -535,3 +532,4 @@ class AppFlowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+

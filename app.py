@@ -158,7 +158,11 @@ st.header("1 · QA data (Data Intake)")
 
 if st.session_state.data is None:
     try:
-        st.session_state.data = get_data.get_all_data()
+        # A public walkthrough must remain synthetic even when a developer's
+        # environment is configured for an authorized private-data run.
+        st.session_state.data = get_data.get_all_data(
+            source_override="synthetic" if sample_mode else None
+        )
     except get_data.DataError as e:
         st.error(f"Could not load the QA data.\n\n{e}")
         st.stop()
@@ -312,6 +316,22 @@ if st.session_state.diagnosis is None:
                         "The saved diagnosis does not match the loaded QA dataset. "
                         "Use the matching source or start a new analysis."
                     )
+                replay_training = pipeline.load_json("training")
+                if not replay_training:
+                    raise pipeline.PipelineError(
+                        "The saved diagnosis has no completed training package to replay. "
+                        "Run the full approved flow in Live mode to create one."
+                    )
+                if replay_training.get("_meta", {}).get(
+                    "data_fingerprint"
+                ) != pipeline.data_fingerprint(data):
+                    raise pipeline.PipelineError(
+                        "The saved training was created from a different QA dataset."
+                    )
+                # Replay historical artifacts together. Never attribute old training
+                # to a new reviewer or to edits that were not used to generate it.
+                st.session_state.training = replay_training
+                st.session_state.approval = pipeline.load_json("approval")
                 st.info(
                     f"REPLAY — showing the saved diagnosis generated {diag.get('_meta', {}).get('generated_at', '?')}"
                 )
@@ -615,15 +635,23 @@ if diag:
                 st.rerun()
     else:
         ap = st.session_state.approval or {}
-        mode_note = (
-            "Handwritten synthetic practice was loaded"
-            if sample_mode
-            else "Training followed this approval"
-        )
-        st.success(
-            f"Reviewed by **{ap.get('approved_by', '?')}** at {ap.get('approved_at', '?')} — "
-            f"findings {', '.join(ap.get('approved_findings', []))}. {mode_note}."
-        )
+        if not live and not sample_mode and not ap:
+            st.info(
+                "REPLAY — saved training is shown as originally generated. "
+                "This run has no separately recorded supervisor approval."
+            )
+        else:
+            mode_note = (
+                "Handwritten synthetic practice was loaded"
+                if sample_mode
+                else "The original saved approval is shown; no new review occurred"
+                if not live
+                else "Training followed this approval"
+            )
+            st.success(
+                f"Reviewed by **{ap.get('approved_by', '?')}** at {ap.get('approved_at', '?')} — "
+                f"findings {', '.join(ap.get('approved_findings', []))}. {mode_note}."
+            )
         if ap.get("changes"):
             with st.expander(
                 f"What the supervisor changed before approving ({len(ap['changes'])} edit(s))"
@@ -795,6 +823,9 @@ if result:
             if r["target_matches_behavior"]
             else "⚠️ check",
             "shared terms": ", ".join(r["shared_terms"]),
+            "knowledge check matches behavior": "✅"
+            if r.get("quiz_matches_behavior")
+            else "⚠️ check",
             "objective": "✅" if r["has_objective"] else "—",
             "scenario": "✅" if r["has_scenario"] else "—",
             "role-play ≥4 turns": "✅" if r["has_roleplay"] else "—",
@@ -900,3 +931,4 @@ if result:
         mime="application/json",
         width="stretch",
     )
+

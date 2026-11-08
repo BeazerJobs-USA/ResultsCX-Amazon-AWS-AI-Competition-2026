@@ -1,6 +1,6 @@
 # Product experience and screenshot notes
 
-These two images show the broader coaching experience our competition concept was aiming for: turning a QA finding into focused coaching, a knowledge check, guided practice, and realistic roleplay. They are **illustrative mockups**, not captures from the current `app.py` code. The working Streamlit implementation uses the same core four stage idea with a different layout.
+These two images show the broader coaching experience our competition concept was aiming for: turning a QA finding into focused coaching, a knowledge check, guided practice, and realistic roleplay. They are **illustrative mockups**, not captures from the current `app.py` code. The internal `LIVE CAPTURE` text is decorative mockup text and should not be interpreted as a recording of a working session. The working Streamlit implementation uses four stages and renders a scripted roleplay, not a live interactive conversation.
 
 ## Roleplay concept
 
@@ -16,5 +16,6 @@ This concept image shows a fictional Case F1 verification problem, a learning ob
 
 ## What the visuals prove and what they do not
 
-The mockups are useful as product design references, but they are not runtime evidence. A future improvement is a genuine capture of the public Streamlit walkthrough with the exact code revision, capture date, and **SYNTHETIC** label. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings.
+The mockups are useful as product design references, but they are not runtime evidence. A future improvement is a genuine capture of the public Streamlit walkthrough with the exact code revision, capture date, and **SYNTHETIC** label. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings. Their three-part concept navigation is not the current four-stage Streamlit interface.
+
 

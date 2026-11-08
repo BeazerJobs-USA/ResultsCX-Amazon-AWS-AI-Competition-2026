@@ -19,6 +19,7 @@ sys.path.insert(0, str(REPO))
 import harness_client as hc  # noqa: E402
 import pipeline  # noqa: E402
 import get_data  # noqa: E402
+import sample_walkthrough  # noqa: E402
 
 
 def ev(**kwargs):
@@ -477,6 +478,42 @@ class PipelineParsingTests(unittest.TestCase):
                 {"source_kind": "private", "checks": []}
             )
 
+    def test_unverified_cross_behavior_evidence_cannot_enter_training_prompt(self):
+        data = get_data.get_all_data(source_override="synthetic")
+        finding = sample_walkthrough.demo_diagnosis(data)["findings"][0]
+        wrong = next(r for r in data["records"] if r["source"] != finding["source"])
+        finding["evidence"].insert(
+            0, {"record_id": wrong["record_id"], "quote": wrong["comment"], "verified": False}
+        )
+        lines = pipeline.evidence_lines_for(finding, data)
+        self.assertNotIn(wrong["record_id"], lines)
+        self.assertIn("CO-", lines)
+
+    def test_missing_training_fields_are_rejected_before_generation_succeeds(self):
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.ensure_module_complete(
+                pipeline.validate_module({}, {"id": "F1", "behavior": "Verify identity"})
+            )
+
+    def test_synthetic_modules_use_distinct_behavior_matched_quizzes(self):
+        data = get_data.get_all_data(source_override="synthetic")
+        diagnosis = sample_walkthrough.demo_diagnosis(data)
+        approved = pipeline.build_approved_findings(diagnosis, {})
+        result = sample_walkthrough.demo_training(approved, data)
+        modules = {m["finding_id"]: m for m in result["modules"]}
+        self.assertNotEqual(
+            modules["F1"]["knowledge_check"]["question"],
+            modules["F2"]["knowledge_check"]["question"],
+        )
+        self.assertTrue(all(r["quiz_matches_behavior"] for r in result["alignment"]))
+
+    def test_synthetic_data_override_ignores_private_env_setting(self):
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"QA_DATA_SOURCE": "private", "ALLOW_PRIVATE_QA_READ": "1"}):
+            data = get_data.get_all_data(source_override="synthetic")
+        self.assertEqual(data["source_kind"], "synthetic")
+
     def test_alignment_check(self):
         approved = [
             {
@@ -505,3 +542,4 @@ class PipelineParsingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+

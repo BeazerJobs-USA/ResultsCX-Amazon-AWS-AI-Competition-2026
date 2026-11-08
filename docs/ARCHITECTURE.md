@@ -9,7 +9,7 @@ I kept the processing stages separate because the QA numbers, model interpretati
 | `get_data.py` | Loads nine invented QA records by default. With explicit authorization switches, it can read local Excel exports and apply limited masking. It computes the rates in Python. |
 | `prompts.py` | Renders the metrics/evidence into a JSON-constrained diagnosis prompt and a separate prompt for each selected coaching module. |
 | `harness_client.py` | Builds `InvokeHarness` requests, handles streamed text/tool events, and gives common failures actionable messages. It reuses one string session ID for related requests. |
-| `pipeline.py` | Validates JSON, matches record IDs/behaviors/quotes, applies supervisor edits, requests training, performs structural alignment checks, and optionally saves results. |
+| `pipeline.py` | Validates JSON, matches record IDs/behaviors/quotes, excludes unverified records from training prompts, checks required training fields, applies supervisor edits, requests training, performs structural alignment checks, and optionally saves results. |
 | `app.py` | Presents QA data, diagnosis, review and coaching in Streamlit. Supports live, saved-run and synthetic walkthrough modes. |
 | `sample_walkthrough.py` | Provides handwritten fictional findings and modules for an AWS-free public demonstration. |
 | `main.py` | Supports offline checks and an explicitly requested live terminal run. |
@@ -39,6 +39,10 @@ Now the diagnosis check requires all three:
 
 For training-module references, the validator checks that a cited ID exists and belongs to the right behavior. The separate alignment function uses simple keyword overlap and checks for an objective, scenario, roleplay, and scoring criteria. **That is a heuristic**, not a semantic assessment or measured learning outcome.
 
+Only verified citations to the selected behavior and QA source enter the training evidence prompt. Other failure comments for that same behavior and source can still provide supporting context. A new behavior-specific knowledge-check indicator makes superficial alignment gaps visible, but it remains a keyword heuristic rather than a guarantee of educational quality. Incomplete model-generated modules are rejected before being treated as completed training.
+
+Saved-run replay loads the original completed diagnosis, approval record when available, and training package together. It does not create a new approval for previously generated content. The public synthetic mode forces the synthetic fixture even when a local environment has private-data access enabled.
+
 ## What I cannot verify from this release
 
 - Live AWS credentials, permissions, and the deployed harness. The tests validate the Boto3 request against the SDK service model with a fake client; they do not contact AWS.
@@ -47,4 +51,5 @@ For training-module references, the validator checks that a cited ID exists and 
 - Training effectiveness. The screenshots show pending or simulated values, and no measured post-training data is available.
 
 Those are the current implementation boundaries; additional runtime and outcome validation remains separate work.
+
 

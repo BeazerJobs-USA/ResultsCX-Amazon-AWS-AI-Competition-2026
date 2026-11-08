@@ -502,13 +502,17 @@ def load_training_outline():
 # ======================================================================================
 # Public entry points
 # ======================================================================================
-def get_all_data():
+def get_all_data(source_override=None):
     """Return synthetic examples by default; private workbooks require opt-in.
 
     Set QA_DATA_SOURCE=private and ALLOW_PRIVATE_QA_READ=1 to read the local
     authorized workbooks. Cloud upload has a separate explicit approval gate.
     """
-    source = os.environ.get("QA_DATA_SOURCE", "synthetic").strip().lower()
+    source = (
+        source_override
+        if source_override is not None
+        else os.environ.get("QA_DATA_SOURCE", "synthetic")
+    ).strip().lower()
     if source == "synthetic":
         try:
             fixture = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
@@ -661,3 +665,4 @@ if __name__ == "__main__":
         print(
             "WARNING: automatic masking is incomplete; an authorized human must review private data."
         )
+

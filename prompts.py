@@ -229,7 +229,7 @@ def build_training_prompt(finding, evidence_lines, related_outline_lines):
 APPROVED FINDING
 id: {finding["id"]}
 QA behavior: {finding.get("behavior", "")}   (section: {finding.get("section", "")})
-defect rate: {finding.get("defect_rate_pct", "?")}% - {finding.get("failed", "?")} of {finding.get("evaluated", "?")} evaluated calls; pattern: {finding.get("pattern", "")}; agents affected: {", ".join(finding.get("agents_failed", [])) or "-"}
+defect rate: {finding.get("defect_rate_pct", "?")}% - {finding.get("failed", "?")} of {finding.get("evaluated", "?")} scored line items; pattern: {finding.get("pattern", "")}; agents affected: {", ".join(finding.get("agents_failed", [])) or "-"}
 title: {finding.get("title", "")}
 observed: {finding.get("observed", "")}
 root cause type: {finding.get("root_cause_type", "")}
@@ -250,7 +250,9 @@ REQUIREMENTS
 - The scenario must be a realistic healthcare member-services call (benefits, claims, EOBs, care plans, provider outreach, HIPAA verification) that reproduces the situations the evaluators described.
 - The role-play script is for a trainee playing the agent against a simulated member: 8-14 turns alternating MEMBER and AGENT, with at least one BRANCH turn where the member's reaction depends on whether the agent demonstrated the target behavior. Add short coach notes on the AGENT turns where the target behavior must appear.
 - Scoring criteria must map to the QA behavior so an evaluator could score the practice call with the same form.
+- The knowledge-check question must directly test the approved QA behavior, not a generic or adjacent topic.
 - Use only fictional member names. Do not reference agent codes or real people.
 
 Respond with ONLY one JSON object in exactly this structure (the values below describe what to write):
 {MODULE_SCHEMA}"""
+

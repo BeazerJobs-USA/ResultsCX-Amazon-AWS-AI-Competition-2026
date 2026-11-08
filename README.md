@@ -2,6 +2,10 @@
 
 ### Agent QA Review | AI assisted QA analysis, supervisor coaching, and targeted practice
 
+**The working application:** Python calculates QA defect patterns, Bedrock AgentCore can draft evidence-linked findings, a supervisor reviews each proposed cause, and selected findings become structured coaching, knowledge checks, exercises, fictional scenarios, and scripted roleplay. The public walkthrough is fully synthetic and does not call AWS.
+
+**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · explicit private-data controls · **30 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
+
 I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with teammates Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
 
 Our team designed a working prototype around a simple problem: a QA score can tell a manager that an employee missed something, but the score alone does not explain what coaching should happen next.
@@ -95,7 +99,7 @@ I used Streamlit to connect four parts of the process. The dashboard lets superv
 | **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The public walkthrough uses invented records. |
 | **2. AI diagnosis** | Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks the citations against the loaded records instead of accepting them at face value. |
 | **3. Supervisor review** | A supervisor or manager can read the evidence, adjust the root cause and intervention, add notes, and include or exclude findings. Escalation can be recommended, but the app does not dispatch operational tasks. |
-| **4. Coaching and practice** | Selected findings become targeted instruction, a knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment and can save results for replay. |
+| **4. Coaching and practice** | Selected findings become targeted instruction, a behavior-specific knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment, including whether the quiz references the target behavior, and can save results for read-only replay. |
 
 The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training.
 
@@ -105,7 +109,7 @@ This is a **multi-stage AI workflow**, with a human review step. I do not descri
 
 ## Product experience and feature vision
 
-These images show the broader coaching experience we wanted the application to communicate. They use **synthetic information** and are illustrative interface mockups rather than screenshots captured from the current `app.py` build. The sample savings shown are not measured outcomes.
+**Concept designs, not application captures:** These images show the broader coaching experience we wanted the application to communicate. They use **synthetic information** and are illustrative interface mockups rather than screenshots captured from the current `app.py` build. The decorative `LIVE CAPTURE` labels within the images are part of the mockup and do not indicate a recorded live session. The sample savings shown are not measured outcomes. The actual application presents a scripted roleplay, not an interactive conversation.
 
 | Coaching and roleplay concept | Coaching focus and alignment concept |
 | --- | --- |
@@ -157,7 +161,7 @@ I worked with the team; I did not write every part of the application by myself.
 | --- | --- | --- |
 | **Synthetic walkthrough** (default) | Runs the dashboard with nine invented QA line items and handwritten diagnosis/training examples | No |
 | **Live Bedrock** | Uses `boto3` and AgentCore `InvokeHarness` to generate an analysis and coaching modules | Yes, an authorized harness and credentials |
-| **Saved-run replay** | Reopens JSON results saved by an earlier run | No live AWS call, but a saved run must already exist |
+| **Saved-run replay** | Reopens a completed diagnosis and training package with its original recorded approval, without collecting a new approval | No live AWS call, but a completed saved run must already exist |
 
 The synthetic walkthrough is deliberately **not** presented as AI output, an actual ResultsCX evaluation, or measured business performance.
 
@@ -208,7 +212,7 @@ I run the offline tests with:
 python -m unittest discover -s tests -v
 ```
 
-**26 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, the Boto3 request shape, supervisor-to-training flow, actual Streamlit script progression, replay behavior, citation checks, and private-data access guards. They do **not** invoke AWS or use confidential ResultsCX workbooks. The live harness connection requires separate authorized testing.
+**30 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, the Boto3 request shape, supervisor-to-training flow, actual Streamlit script progression, replay behavior, citation checks, behavior-matched quiz examples, incomplete-module rejection, and private-data access guards. They do **not** invoke AWS or use confidential ResultsCX workbooks. The live harness connection requires separate authorized testing.
 
 The dashboard examples use invented cases. No post-training QA comparison has been supplied, so I don't claim an actual reduction in defects or real labor savings. This is a student competition project, not a deployed ResultsCX system.
 
@@ -245,8 +249,9 @@ requirements.lock          Tested Python 3.12 versions
 
 ## Team and next steps
 
-My teammates were **Kevin Jackendy, Kylee, Jack Nelson**. We worked on the same competition project, and I have kept the contributions I can personally account for separate from the team's overall work.
+My teammates were **Kevin, Jackendy, Kylee, Jack, and Nelson**. We worked on the same competition project, and I have kept the contributions I can personally account for separate from the team's overall work.
 
 The next steps are to capture the current Streamlit workflow, finish authorized testing against the live AWS harness, and compare the coaching output with actual follow-up QA results if those become available.
 
 *ResultsCX and AWS are trademarks of their owners. This is an independent student-team project, not an official ResultsCX or AWS product.*
+

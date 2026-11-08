@@ -14,9 +14,9 @@ def demo_diagnosis(data):
             "CO",
             "F1",
             "Verification before account discussion",
-            "Process Gap",
+            "Skill Gap",
             "Some sample calls skipped an identity-verification step.",
-            "The procedure may not be clear during a rushed call. I would verify this with a supervisor.",
+            "The verification behavior may be difficult to execute consistently under call pressure. A supervisor should confirm the actual cause.",
         ),
         (
             "BP",
@@ -143,6 +143,85 @@ def demo_training(approved_findings, data):
                 },
             ],
         }
+        if finding.get("source") == "BP":
+            # Different evidence must lead to different practice. The documentation case
+            # should never inherit the identity-verification quiz from the compliance case.
+            module.update(
+                {
+                    "module_title": "Practice: Document the resolution and next steps",
+                    "learning_objective": (
+                        "Document the resolution, responsible owner, and next action in a "
+                        "fictional service record before closing the interaction."
+                    ),
+                    "why_this_fixes_the_gap": (
+                        "The fictional QA comments identify incomplete follow-up notes. "
+                        "This practice requires a complete, reviewable handoff."
+                    ),
+                    "instruction": [
+                        "Summarize the customer's stated issue and the resolution given.",
+                        "Record the next action and who is responsible for it.",
+                        "Confirm the customer's understanding and document any outstanding follow-up.",
+                    ],
+                    "knowledge_check": {
+                        "question": "Which documentation best captures the resolution and next steps?",
+                        "options": [
+                            "A) Customer contacted support; issue discussed",
+                            "B) Resolution explained, follow-up owner recorded, and next action noted",
+                            "C) No notes needed once the customer agrees",
+                        ],
+                        "correct": "B",
+                        "feedback": (
+                            "A useful record states what was resolved, who owns the follow-up, "
+                            "and what happens next; use the organization's approved documentation standard."
+                        ),
+                    },
+                    "hands_on_exercise": {
+                        "title": "Complete a fictional follow-up record",
+                        "trainee_instructions": (
+                            "Read the sample interaction and write a note with the resolution, "
+                            "owner, and next action."
+                        ),
+                        "facilitator_instructions": (
+                            "Compare each note element with the scenario and ask the trainee "
+                            "to explain any missing follow-up details."
+                        ),
+                        "success_criteria": [
+                            "Resolution is accurate and complete",
+                            "Follow-up owner is identified",
+                            "Next action is explicit and can be reviewed",
+                        ],
+                    },
+                    "simulation_scenario": {
+                        "scenario_id": "SAMPLE-DOC-1",
+                        "call_driver": "Fictional benefits inquiry requiring a documented follow-up",
+                        "member_persona": "Fictional customer waiting for a response",
+                        "member_emotion": "Concerned about repeated calls",
+                        "scenario_context": (
+                            "An agent explains an account update but must capture which team "
+                            "will confirm the outstanding item and the next contact step."
+                        ),
+                        "behavioral_target": "Document the resolution and next steps accurately",
+                        "expected_agent_response": (
+                            "Summarize the resolution, name the follow-up owner, and clearly "
+                            "document the next action without promising an unsupported deadline."
+                        ),
+                        "scoring_criteria": [
+                            "Documents the resolution accurately",
+                            "Records who owns the outstanding action",
+                            "Records a clear next step and confirms customer understanding",
+                        ],
+                    },
+                    "roleplay_script": [
+                        {"speaker": "MEMBER", "line": "Will someone follow up about the update?"},
+                        {"speaker": "AGENT", "line": "I'll summarize what we resolved and check the next step.", "coach_note": "Identify the resolution precisely."},
+                        {"speaker": "MEMBER", "line": "Who is responsible for contacting me?"},
+                        {"speaker": "AGENT", "line": "I'll record the responsible team and the outstanding task in the service note.", "coach_note": "Name the owner in the fictional record."},
+                        {"speaker": "MEMBER", "line": "I don't want to repeat everything when I call again."},
+                        {"speaker": "AGENT", "line": "I'll document the resolution and next action so the follow-up is clear.", "coach_note": "Check that the record is complete."},
+                        {"speaker": "BRANCH", "if_agent_demonstrates_behavior": "The member confirms the documented next step.", "if_agent_does_not": "The member asks who will take ownership and what happens next."},
+                    ],
+                }
+            )
         modules.append(pipeline.validate_module(module, finding, data))
 
     return {
@@ -155,3 +234,4 @@ def demo_training(approved_findings, data):
             "source": "handwritten synthetic walkthrough",
         },
     }
+
