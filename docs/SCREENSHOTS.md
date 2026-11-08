@@ -6,13 +6,13 @@ These two images show the broader coaching experience our competition concept wa
 
 ![Illustrative roleplay screen](screenshots/agent-qa-roleplay-demo.webp)
 
-This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. The baseline and labor amounts are synthetic. Its post-training evaluation is pending.
+This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. It communicates the proposed business value of reducing manual coaching preparation, but it does not measure actual supervisor time or calculate verified savings. The baseline and labor amounts are synthetic. Its post-training evaluation is pending.
 
 ## Coaching and alignment concept
 
 ![Illustrative coaching screen](screenshots/agent-qa-coaching-focus-demo.webp)
 
-This concept image shows a fictional Case F1 verification problem, a learning objective, an alignment table, and a simulated training-time cost. The visible desktop date is not evidence of when the 2026 competition occurred.
+This concept image shows a fictional Case F1 verification problem, a learning objective, an alignment table, and a simulated training-time cost. It is an illustration of how a coaching plan and its assumed costs could be presented, not a financial result produced by the current application. The visible desktop date is not evidence of when the 2026 competition occurred.
 
 ## What the visuals prove and what they do not
 

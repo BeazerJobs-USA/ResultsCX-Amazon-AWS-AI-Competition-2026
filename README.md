@@ -1,34 +1,47 @@
 # ResultsCX × Amazon AWS AI Competition 2026
 
-### Agent QA Review | AI assisted QA analysis, supervisor coaching, and targeted practice
+### Agent QA Review | From a QA finding to targeted coaching and practice
 
-**The working application:** Python calculates QA defect patterns, Bedrock AgentCore can draft evidence-linked findings, a supervisor reviews each proposed cause, and selected findings become structured coaching, knowledge checks, exercises, fictional scenarios, and scripted roleplay. The public walkthrough is fully synthetic and does not call AWS.
+**A failed QA item should lead to more than another score on a report.** Imagine a customer-service employee who discusses a member's plan update before completing the required identity-verification steps. An evaluator records the missed behavior, but a supervisor still has to interpret the evidence, decide what needs correcting, and prepare a useful coaching conversation. Repeat that process across employees and recurring QA issues, and the work between *finding a mistake* and *helping someone correct it* becomes a challenge of its own.
 
-**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · explicit private-data controls · **30 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
+Our team built **Agent QA Review** to connect those steps. Python measures which scored behaviors are being missed and links the results to evaluator comments. Amazon Bedrock AgentCore can turn that evidence into a proposed explanation and intervention. A supervisor checks and edits the finding before the application prepares a focused coaching package: a learning objective, teaching points, a knowledge check, a guided exercise, a fictional customer scenario, and a branching roleplay script with coach notes.
+
+**The value is the handoff:** one reviewed QA problem can travel from evidence to a specific practice activity without a supervisor having to assemble every training element from scratch. That lets the supervisor focus on deciding what the evidence means, checking the recommendation, and coaching the employee rather than starting each lesson plan from a blank page.
+
+**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review · tailored practice modules · explicit private-data controls · **30 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
+
+[![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
+
+*From scored QA evidence to a supervisor-reviewed coaching plan. [Open the full-size workflow](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg).*
 
 I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with teammates Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
 
-Our team designed a working prototype around a simple problem: a QA score can tell a manager that an employee missed something, but the score alone does not explain what coaching should happen next.
-
-We built **Agent QA Review**, an AI assisted workflow that takes scored customer service evaluations, identifies performance patterns, helps a supervisor review the evidence and likely cause, then turns the approved finding into targeted coaching and practice.
-
-The goal was to shorten the path from **finding a QA problem** to **giving the employee a specific way to learn and practice the behavior**.
-
 This repository presents the competition application, the product idea behind it, the code I contributed to and later refined, and a public walkthrough that can be reviewed without ResultsCX data.
 
-## The idea in one sentence
+## The core idea
 
-> **Turn QA findings into manager reviewed coaching, quizzes, guided practice, realistic customer scenarios, and roleplay instead of leaving supervisors with a score and a separate manual training process.**
+> **Find the missed behavior. Check the evidence. Let a supervisor make the call. Turn the approved finding into focused coaching and practice.**
+
+### One missed verification step, one focused coaching plan
+
+The public demonstration includes an **invented** compliance evaluation in which an employee discusses a plan update before finishing verification. Here is how that kind of finding moves through the workflow:
+
+1. **Identify the pattern.** The application reads scored QA line items and comments, calculates the defect rate in Python, and keeps the finding connected to its source record. It does not listen to call recordings or transcribe audio.
+2. **Draft the diagnosis.** In authorized live mode, AI proposes what may explain the missed behavior, cites supporting evaluator comments, and suggests whether practice, instruction, coaching, or operational escalation is appropriate. That is a hypothesis for review, not a proven psychological or operational root cause.
+3. **Put the supervisor in control.** The supervisor sees the observed evidence separately from the AI interpretation, can change the proposed cause and intervention, and chooses which findings actually warrant training.
+4. **Build the practice.** For selected findings, the training workflow prepares an objective, instructions, a knowledge-check question with suggested answer and feedback, facilitator-guided practice, an imaginary member situation, scoring criteria, and a scripted conversation with alternative member reactions. The supervisor can use these materials in a coaching session.
+
+The public synthetic walkthrough shows handwritten fictional outputs for this process. Bedrock generation is a separate live mode requiring an authorized AWS harness; neither the example nor its figures represent real ResultsCX employee performance.
 
 ## The problem we wanted to improve
 
-A traditional QA workflow can become fragmented. A supervisor may have to move between reports, evaluator comments, training material, notes, and separate coaching activities. A low score may identify **what went wrong**, but someone still has to decide what the evidence means, whether training is the right response, what should be coached, and how the employee should practice it.
+A QA score is a starting point, not a coaching strategy. A supervisor may need to move between scored evaluations, written comments, training outlines, and coaching notes to answer four practical questions: **What happened? Does the evidence explain why? Is training the right response? What should the employee practice?**
 
 Our application was designed to connect those decisions into one guided workflow:
 
 **QA evidence → diagnosis draft → manager judgment → targeted coaching → practice**
 
-The improvement we were trying to demonstrate was **workflow integration**. Instead of treating QA analytics, supervisor review, training design, and practice as separate activities, the same finding can move through the entire process while a human supervisor stays in control.
+The improvement we were trying to demonstrate was **workflow integration**. Instead of treating QA analytics, supervisor review, training design, and practice as disconnected activities, the same finding can move through the process while the human supervisor stays in control. This is particularly useful when the same QA behavior is missed across multiple evaluations and a generic refresher course would not address the specific issue.
 
 This is not a claim that the prototype outperforms a named commercial QA platform. It is the product idea we were pitching: make the path from a QA finding to useful coaching faster, more focused, and easier to trace back to the original evidence.
 
@@ -74,25 +87,35 @@ Because some competition scenarios involved healthcare member services, the trai
 
 ## Why this approach could be useful
 
-Compared with a fragmented manual workflow, the application is intended to offer:
+The central advantage is not simply producing an AI-written report. It is **moving from a verified QA issue to a usable, behavior-specific coaching activity in the same workflow**. Compared with a fragmented manual process, the application is intended to offer:
 
 * **More focused coaching:** training is built around a specific scored behavior instead of generic customer service material.
-* **Faster preparation:** AI gives the manager a structured starting point instead of requiring every coaching activity to be created from scratch.
+* **Less repetitive preparation:** AI drafts an evidence-linked diagnosis and training materials so the manager has a structured starting point instead of preparing every exercise from scratch.
 * **Human control:** supervisors can edit, reject, or exclude findings before training is generated.
 * **Traceability:** findings can be tied back to specific QA record IDs and evaluator comments.
-* **Consistent practice:** quizzes, exercises, scenarios, and roleplay can follow the same learning objective.
+* **Consistent practice:** quizzes, exercises, fictional scenarios, scoring criteria, and branching roleplay scripts can follow the same learning objective.
 * **Clearer fact versus inference:** the interface separates what evaluators actually observed from what the model believes may explain it.
 * **Reusable review:** saved runs can be reopened instead of forcing every review to begin again.
 
-These are intended product advantages. I do **not** claim measured labor savings, defect reduction, or production performance because the repository does not contain post deployment business results.
+### The business case: supervisor time, coaching consistency, and traceable decisions
+
+In a large contact center, the cost of QA follow-up is not limited to grading the call. Someone also has to review the finding, decide what the employee needs, prepare the material, and conduct the coaching. Agent QA Review targets the **preparation and handoff** part of that work. It can assemble a draft coaching package for a selected behavior while keeping the evidence and supervisor decision visible.
+
+The potential organizational value has three parts:
+
+1. **Supervisor preparation time:** spend less effort assembling an initial lesson plan, quiz, and scenario from separate notes and documents.
+2. **More specific practice:** focus a coaching session on the recorded behavior instead of automatically assigning a broad refresher course.
+3. **Reviewable decisions:** preserve which QA finding led to the proposed intervention and what the supervisor approved.
+
+The concept mockups include a labor-cost illustration to show how a business case **could** be estimated. A defensible estimate would compare measured preparation time before and after using the workflow, multiply any time difference by the number of cases and an appropriate loaded labor rate, and account for the time supervisors still spend reviewing AI output. That analysis has **not** been implemented or validated as a live savings calculator in this repository. No real labor savings, defect reduction, or production performance have been measured here.
+
+The project therefore demonstrates the workflow that could create value, together with a way to evaluate that value in a future authorized pilot. It does not claim that other QA products lack coaching features or that this prototype has already outperformed them.
 
 ## How the application works
 
 I used Streamlit to connect four parts of the process. The dashboard lets supervisors move from QA findings to a specific coaching decision, while the AI handles the diagnosis draft and the training content for selected findings.
 
-[![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
-
-**[Open the full-size architecture diagram](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)**. The SVG stays sharp when zoomed in.
+The [full-size architecture diagram](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg) above illustrates how each stage passes the reviewed finding to the next. The SVG stays sharp when zoomed in.
 
 | Stage | What happens |
 | --- | --- |
@@ -116,7 +139,7 @@ This is a **multi-stage AI workflow**, with a human review step. I do not descri
 | [![Roleplay interface mockup](docs/screenshots/agent-qa-roleplay-demo.webp)](docs/screenshots/agent-qa-roleplay-demo.webp) | [![Coaching focus mockup](docs/screenshots/agent-qa-coaching-focus-demo.webp)](docs/screenshots/agent-qa-coaching-focus-demo.webp) |
 | Fictional branching dialogue, quiz and guided practice | Synthetic QA baseline, learning objective and alignment example |
 
-The working Streamlit interface uses a four stage layout. I kept the mockups because they show the intended product experience: a manager moves from a QA issue into coaching, a knowledge check, guided practice, and realistic roleplay while keeping the training tied to the original problem. Their exact limitations are explained in [Screenshot notes](docs/SCREENSHOTS.md).
+The working Streamlit interface uses a four-stage layout. I kept the mockups because they communicate the intended experience: a manager moves from a QA issue into coaching, a knowledge check, guided practice, and realistic roleplay while keeping the training tied to the original problem. The labor-cost tables are **illustrative business-case designs**, not a current analytics feature or proof of savings. Their exact limitations are explained in [Screenshot notes](docs/SCREENSHOTS.md).
 
 ## Healthcare privacy and security design
 
