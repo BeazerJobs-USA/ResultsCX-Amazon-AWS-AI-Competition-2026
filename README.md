@@ -1,24 +1,88 @@
 # ResultsCX × Amazon AWS AI Competition 2026
 
-### Agent QA Review | Python, Streamlit, and Amazon Bedrock AgentCore
+### Agent QA Review | AI assisted QA analysis, supervisor coaching, and targeted practice
 
-I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with Kevin Jackendy, Kylee, Jack Nelson in the ResultsCX and AWS AI College Competition.
+I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with teammates Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
 
-Our team built a QA diagnosis and coaching prototype. The idea was straightforward: read scored customer-service evaluations, identify where an agent is struggling, let a supervisor review the finding, then generate training and practice material for the specific issue. We presented a working team demonstration to the judges and received positive feedback on our technical execution.
+Our team designed a working prototype around a simple problem: a QA score can tell a manager that an employee missed something, but the score alone does not explain what coaching should happen next.
 
-I worked on the Python environment, AWS integration troubleshooting, Streamlit interface, data retrieval, and prompt workflow. This repository includes the application code I shared, my updated tests, and a safe public demonstration that does not require access to ResultsCX files.
+We built **Agent QA Review**, an AI assisted workflow that takes scored customer service evaluations, identifies performance patterns, helps a supervisor review the evidence and likely cause, then turns the approved finding into targeted coaching and practice.
 
-## What you can run
+The goal was to shorten the path from **finding a QA problem** to **giving the employee a specific way to learn and practice the behavior**.
 
-| Mode | What it does | Needs AWS or private data? |
-| --- | --- | --- |
-| **Synthetic walkthrough** (default) | Runs the dashboard with nine invented QA line items and handwritten diagnosis/training examples | No |
-| **Live Bedrock** | Uses `boto3` and AgentCore `InvokeHarness` to generate an analysis and coaching modules | Yes, an authorized harness and credentials |
-| **Saved-run replay** | Reopens JSON results saved by an earlier run | No live AWS call, but a saved run must already exist |
+This repository presents the competition application, the product idea behind it, the code I contributed to and later refined, and a public walkthrough that can be reviewed without ResultsCX data.
 
-The synthetic walkthrough is deliberately **not** presented as AI output, an actual ResultsCX evaluation, or measured business performance.
+## The idea in one sentence
 
-## The application
+> **Turn QA findings into manager reviewed coaching, quizzes, guided practice, realistic customer scenarios, and roleplay instead of leaving supervisors with a score and a separate manual training process.**
+
+## The problem we wanted to improve
+
+A traditional QA workflow can become fragmented. A supervisor may have to move between reports, evaluator comments, training material, notes, and separate coaching activities. A low score may identify **what went wrong**, but someone still has to decide what the evidence means, whether training is the right response, what should be coached, and how the employee should practice it.
+
+Our application was designed to connect those decisions into one guided workflow:
+
+**QA evidence → diagnosis draft → manager judgment → targeted coaching → practice**
+
+The improvement we were trying to demonstrate was **workflow integration**. Instead of treating QA analytics, supervisor review, training design, and practice as separate activities, the same finding can move through the entire process while a human supervisor stays in control.
+
+This is not a claim that the prototype outperforms a named commercial QA platform. It is the product idea we were pitching: make the path from a QA finding to useful coaching faster, more focused, and easier to trace back to the original evidence.
+
+## What the application is meant to do
+
+### For supervisors and managers
+
+The application is designed to help a supervisor:
+
+1. See behavior level defect rates and the evaluator comments behind them.
+2. Review AI proposed findings instead of starting from a blank page.
+3. Separate **observed QA evidence** from the AI's **inferred explanation**.
+4. Check which source records support a finding.
+5. Edit the proposed root cause and recommended intervention.
+6. Add supervisor notes and include or exclude findings.
+7. Decide which issues actually need training.
+8. Open targeted coaching and practice material for the approved issue.
+9. Reopen saved results when a saved run exists.
+
+The intention is to reduce the manual work between identifying a problem and preparing a focused coaching session without removing the manager from the decision.
+
+### For employees and trainees
+
+For an approved finding, the coaching workflow is designed to provide:
+
+1. A clear learning objective.
+2. Short targeted instruction.
+3. A knowledge check with answer choices, a suggested answer, and feedback.
+4. A guided exercise with trainee and facilitator instructions.
+5. Observable success criteria.
+6. A realistic fictional customer or healthcare member scenario.
+7. A benchmark for what good performance should look like.
+8. A branching roleplay where the simulated customer reacts differently depending on whether the target behavior is demonstrated.
+9. Coach notes showing what to pay attention to during practice.
+
+The purpose is not simply to tell an employee that a QA item was missed. It is to give the employee something specific to **learn, practice, and discuss with a supervisor**.
+
+### For customers and healthcare members
+
+The application is not a customer facing chatbot. The customer benefit is indirect: the concept is intended to help employees practice the behaviors that affect service quality, including clear explanations, documentation, verification, and handling realistic member situations.
+
+Because some competition scenarios involved healthcare member services, the training workflow supports fictional scenarios involving benefits, claims, EOBs, care plans, provider outreach, and HIPAA verification.
+
+## Why this approach could be useful
+
+Compared with a fragmented manual workflow, the application is intended to offer:
+
+* **More focused coaching:** training is built around a specific scored behavior instead of generic customer service material.
+* **Faster preparation:** AI gives the manager a structured starting point instead of requiring every coaching activity to be created from scratch.
+* **Human control:** supervisors can edit, reject, or exclude findings before training is generated.
+* **Traceability:** findings can be tied back to specific QA record IDs and evaluator comments.
+* **Consistent practice:** quizzes, exercises, scenarios, and roleplay can follow the same learning objective.
+* **Clearer fact versus inference:** the interface separates what evaluators actually observed from what the model believes may explain it.
+* **Reusable review:** saved runs can be reopened instead of forcing every review to begin again.
+
+These are intended product advantages. I do **not** claim measured labor savings, defect reduction, or production performance because the repository does not contain post deployment business results.
+
+## How the application works
 
 I used Streamlit to connect four parts of the process. The dashboard lets supervisors move from QA findings to a specific coaching decision, while the AI handles the diagnosis draft and the training content for selected findings.
 
@@ -39,20 +103,42 @@ The knowledge check displays questions and suggested answers; it does not grade 
 
 This is a **multi-stage AI workflow**, with a human review step. I do not describe it as six independently deployed agents because the code does not establish that.
 
-## Screens and interface design
+## Product experience and feature vision
 
-These two images were prepared as **illustrative interface mockups using synthetic information**. They are not screenshots captured from the current `app.py` build, and the sample savings shown are not measured outcomes.
+These images show the broader coaching experience we wanted the application to communicate. They use **synthetic information** and are illustrative interface mockups rather than screenshots captured from the current `app.py` build. The sample savings shown are not measured outcomes.
 
 | Coaching and roleplay concept | Coaching focus and alignment concept |
 | --- | --- |
 | [![Roleplay interface mockup](docs/screenshots/agent-qa-roleplay-demo.webp)](docs/screenshots/agent-qa-roleplay-demo.webp) | [![Coaching focus mockup](docs/screenshots/agent-qa-coaching-focus-demo.webp)](docs/screenshots/agent-qa-coaching-focus-demo.webp) |
 | Fictional branching dialogue, quiz and guided practice | Synthetic QA baseline, learning objective and alignment example |
 
-The working Streamlit interface uses a four-stage layout. I kept the mockups as design references, with their limitations explained in [Screenshot notes](docs/SCREENSHOTS.md).
+The working Streamlit interface uses a four stage layout. I kept the mockups because they show the intended product experience: a manager moves from a QA issue into coaching, a knowledge check, guided practice, and realistic roleplay while keeping the training tied to the original problem. Their exact limitations are explained in [Screenshot notes](docs/SCREENSHOTS.md).
+
+## Healthcare privacy and security design
+
+Because the use case can involve healthcare member service data, confidentiality is part of the application design rather than an afterthought.
+
+| Control | Plain English purpose |
+| --- | --- |
+| **Synthetic data by default** | The public walkthrough runs without real customer, member, or employee records. |
+| **Employee pseudonyms** | The private data path replaces known employee identities with codes before model use. |
+| **Identifier masking** | The parser masks several common patterns such as emails, phone numbers, dates, provider references, and long identifiers. |
+| **Private data read gate** | Private QA files are not read unless an explicit configuration switch is enabled. |
+| **Cloud send gate** | The private data path is blocked from being sent to AWS unless a separate explicit authorization switch is enabled. |
+| **Private output storage gate** | Derived private JSON is not written locally unless a separate storage switch is enabled. |
+| **Credential separation** | AWS identifiers and credentials stay outside the source code and use environment configuration and Boto3's credential provider chain. |
+| **Repository exclusions** | `.gitignore` keeps company workbooks, credentials, local environment files, real name lists, logs, and saved outputs out of Git. |
+| **Evidence validation** | The pipeline checks record ID, behavior, and quoted text before labeling a diagnosis citation verified. |
+
+These controls reflect **HIPAA aware confidentiality concerns and privacy minded development**, especially the goal of minimizing unnecessary exposure of healthcare related information.
+
+They do **not** make the prototype HIPAA compliant. The masking is not certified de identification, saved JSON is not encrypted, and this repository cannot verify organizational AWS agreements, IAM policy, retention controls, or authorization to process protected health information.
+
+See [Security](docs/SECURITY.md) for the implementation boundaries.
 
 ## My technical contributions
 
-I was the technical architecture and integration lead for my part of the team. These are the specific problems I worked on:
+My contribution focused on helping turn the team's idea into a working technical workflow. I assisted with coding, troubleshooting, AWS integration, data handling, the Streamlit graphical interface, prompt workflow, and security minded handling of sensitive data. These are the specific areas I worked on:
 
 1. **Development setup:** I configured our local GitHub project in VS Code on Windows 11 and worked through Python virtual environment and path problems using `uv`.
 2. **Dependencies:** I resolved installation and import issues involving Boto3, OpenPyXL, pandas and requests during development. The public dependency list now contains only the packages the application uses.
@@ -61,9 +147,19 @@ I was the technical architecture and integration lead for my part of the team. T
 5. **Data processing:** I investigated retrieval and parsing issues in `get_data.py` and helped connect the extracted evidence to the analysis stages.
 6. **Prompt design:** I wrote and revised instructions separating observed evidence from inferred causes, structured JSON responses, supervisor review, and targeted training content.
 
-I was also responsible for privacy-aware handling in my part of the application. The current code uses environment configuration, pseudonyms for the private-data path, and a gate before private QA data can be sent to AWS. I am **not** claiming the regex masking is complete de-identification, that saved JSON is encrypted, or that the prototype is HIPAA compliant.
+I also worked on the privacy and security side of the application because the healthcare member service use case can involve sensitive information. The current public code keeps credentials outside source code, uses pseudonyms in the private data path, masks several common identifier patterns, and requires explicit controls before private QA data can be read, sent to AWS, or saved as derived output. These are **HIPAA aware confidentiality controls**, not a claim of HIPAA compliance. The masking is not certified de identification and saved JSON is not encrypted.
 
 I worked with the team; I did not write every part of the application by myself. The September competition prototype and this later, public-safe cleanup are separate pieces of work.
+
+## What you can run
+
+| Mode | What it does | Needs AWS or private data? |
+| --- | --- | --- |
+| **Synthetic walkthrough** (default) | Runs the dashboard with nine invented QA line items and handwritten diagnosis/training examples | No |
+| **Live Bedrock** | Uses `boto3` and AgentCore `InvokeHarness` to generate an analysis and coaching modules | Yes, an authorized harness and credentials |
+| **Saved-run replay** | Reopens JSON results saved by an earlier run | No live AWS call, but a saved run must already exist |
+
+The synthetic walkthrough is deliberately **not** presented as AI output, an actual ResultsCX evaluation, or measured business performance.
 
 ## Run it locally
 
