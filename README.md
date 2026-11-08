@@ -168,7 +168,7 @@ The dashboard examples use invented cases. No post-training QA comparison has be
 | Feasibility | 10% |
 | Presentation | 10% |
 
-Those are the competition's rubric weights, **not our awarded scores**. I have not published a placement or an unverified award.
+Those are the competition's rubric weights, **not our awarded scores**. I have not published a placement.
 
 ## Repository map
 
