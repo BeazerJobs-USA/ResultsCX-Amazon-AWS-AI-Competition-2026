@@ -1,6 +1,6 @@
 # Security and data-handling notes
 
-I designed the public version so a recruiter can run the synthetic example without company records or AWS access. The original code's masking was useful but limited. I made that distinction explicit because a regex-based scrubber does not prove that all personal information has been removed.
+I configured the default workflow to use invented QA records, so the application runs without company files or AWS access. The private-data parser has limited masking, and those regex checks do not establish that all personal information was removed.
 
 ## Controls present in the public code
 

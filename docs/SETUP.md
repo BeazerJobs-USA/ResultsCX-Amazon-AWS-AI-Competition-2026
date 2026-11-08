@@ -50,4 +50,4 @@ I only use this with a harness and account the team is authorized to access:
 | Boto3 session type error | `runtimeSessionId` needs `str(uuid.uuid4())`, not a UUID object. |
 | A replay has no data | Run a new synthetic or authorized live flow to create local saved output. |
 
-The private-data path is described in [Security](SECURITY.md). I don't recommend enabling it for a public portfolio demo.
+The private-data path is described in [Security](SECURITY.md). I keep it disabled unless the dataset and processing environment are approved for that use.

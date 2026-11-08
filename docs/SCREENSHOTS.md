@@ -1,6 +1,6 @@
 # Screenshot notes
 
-I kept the two supplied application images because they communicate the intended coaching experience. They are **illustrative mockups**, not verified captures from the current source code. The running Streamlit implementation has four stages and a different layout. I don't want a reviewer to assume the code renders an identical screen.
+These two images show the intended coaching experience. They are **illustrative mockups**, not captures from the current `app.py` code. The working Streamlit implementation has four stages and a different layout.
 
 ## Roleplay concept
 

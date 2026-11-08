@@ -11,7 +11,7 @@ I'm George Beazer, a senior cybersecurity student at KSU. This was a six-person 
 | Prompt design | Developed the stage-specific instructions and supervisor handoff logic | `prompts.py`, `pipeline.py` |
 | Security-minded development | Worked on separating local configuration, keeping names out of model prompts, and checking the data being submitted | `.env.example`, `get_data.py`, `pipeline.py` |
 
-The updated public version also includes synthetic sample data, tighter citation checks, and a runnable offline walkthrough. I treat that as follow-up portfolio cleanup rather than implying all changes existed during the two-day competition.
+Later code revisions added synthetic sample data, tighter citation checks, and an offline walkthrough. Those changes are separate from the work completed during the two-day competition.
 
 ## Team credit
 

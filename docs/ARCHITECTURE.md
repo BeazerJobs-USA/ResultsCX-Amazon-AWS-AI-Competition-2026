@@ -4,7 +4,7 @@ I kept the processing stages separate because the QA numbers, model interpretati
 
 ## What the code does
 
-| Module | My reading of its responsibility |
+| Module | What it does |
 | --- | --- |
 | `get_data.py` | Loads nine invented QA records by default. With explicit authorization switches, it can read local Excel exports and apply limited masking. It computes the rates in Python. |
 | `prompts.py` | Renders the metrics/evidence into a JSON-constrained diagnosis prompt and a separate prompt for each selected coaching module. |
@@ -14,14 +14,16 @@ I kept the processing stages separate because the QA numbers, model interpretati
 | `sample_walkthrough.py` | Provides handwritten fictional findings and modules for an AWS-free public demonstration. |
 | `main.py` | Supports offline checks and an explicitly requested live terminal run. |
 
-```mermaid
-flowchart TD
-    A["QA input and Python statistics"] --> B["Evidence-based diagnosis"]
-    B --> C{"Reviewer decision"}
-    C -->|Edit or reject| B
-    C -->|Select findings| D["Coaching modules"]
-    D --> E["Citation and structural alignment checks"]
-```
+## Stage boundaries
+
+| Stage | Input and decision | Output |
+| --- | --- | --- |
+| **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations | Behavior metrics, agent-date proxy counts, evidence rows |
+| **2. AI diagnosis** | The harness processes selected evidence and structured prompts | Proposed root causes, cited records, intervention suggestions and citation checks |
+| **3. Supervisor review** | A manager or supervisor can edit the cause, intervention, notes, and training selection | Reviewed findings; excluded findings do not generate modules |
+| **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
+
+The [main README](../README.md#the-application) illustrates the full set of actions and output branches.
 
 The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
 
@@ -44,5 +46,5 @@ For training-module references, the validator checks that a cited ID exists and 
 - Production privacy controls. The private-data scrubber uses regexes and known names, which can miss identifiers. The public walkthrough avoids this by using invented records.
 - Training effectiveness. The screenshots show pending or simulated values, and no measured post-training data is available.
 
-These boundaries help me explain what was actually built without promising more than the code shows.
+Those are the current implementation boundaries; additional runtime and outcome validation remains separate work.
 

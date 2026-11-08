@@ -20,16 +20,61 @@ The synthetic walkthrough is deliberately **not** presented as AI output, an act
 
 ## The application
 
-I used Streamlit to connect the workflow into four stages:
+I used Streamlit to connect four parts of the process. The dashboard lets supervisors move from QA findings to a specific coaching decision, while the AI handles the diagnosis draft and the training content for selected findings.
 
 ```mermaid
-flowchart TD
-    A["QA records and Python metrics"] --> B["Bedrock diagnosis and evidence checks"]
-    B --> C{"Supervisor review"}
-    C -->|Revise| B
-    C -->|Approve| D["Coaching, quiz, scenario and roleplay"]
-    D --> E["Alignment checks and optional saved replay"]
+flowchart LR
+    subgraph S1["1. QA intake | Python"]
+        direction TB
+        A1["Scored QA records or synthetic examples"] --> A2["Normalize evidence and calculate defect rates"]
+    end
+    subgraph S2["2. Diagnosis | AI and Python"]
+        direction TB
+        B1["Bedrock AgentCore drafts an analysis"] --> B2["Observed issues, possible causes and interventions"]
+        B2 --> B3["Python validates citations and attaches calculated metrics"]
+    end
+    subgraph S3["3. Decisions | Supervisor or manager"]
+        direction TB
+        C1["Review evidence, defect rate and proposed cause"] --> C2{"Choose an action"}
+        C2 -->|Revise| C3["Edit cause, intervention and notes"]
+        C2 -->|Include| C4["Approve finding for coaching"]
+        C3 --> C4
+        C2 -->|Exclude| C5["Exclude finding from coaching"]
+    end
+    subgraph S4["4. Coaching and practice | AI output"]
+        direction TB
+        D1["Generate a module for each approved finding"]
+        D1 --> D2["Coach: learning objective, instruction and feedback"]
+        D1 --> D3["Quiz: question, answer and explanation"]
+        D1 --> D4["Practice: trainee steps and scoring criteria"]
+        D1 --> D5["Customer scenario: fictional member, issue and expected response"]
+        D5 --> D6["Agent/member roleplay script with decision branches"]
+        D2 --> D7["Check training alignment and optionally save results"]
+        D3 --> D7
+        D4 --> D7
+        D6 --> D7
+    end
+    A2 --> B1
+    B3 --> C1
+    C4 --> D1
+    classDef data fill:#e9f4ff,stroke:#3078be,color:#14273d,stroke-width:1px
+    classDef ai fill:#f0eafe,stroke:#8655ba,color:#2a1945,stroke-width:1px
+    classDef human fill:#e5f5ef,stroke:#338e6a,color:#153c31,stroke-width:1px
+    classDef training fill:#fff3dc,stroke:#bf8a28,color:#523b13,stroke-width:1px
+    class A1,A2 data
+    class B1,B2,B3 ai
+    class C1,C2,C3,C4,C5 human
+    class D1,D2,D3,D4,D5,D6,D7 training
 ```
+
+| Stage | What happens |
+| --- | --- |
+| **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The public walkthrough uses invented records. |
+| **2. AI diagnosis** | Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks the citations against the loaded records instead of accepting them at face value. |
+| **3. Supervisor review** | A supervisor or manager can read the evidence, adjust the root cause and intervention, add notes, and include or exclude findings. Escalation can be recommended, but the app does not dispatch operational tasks. |
+| **4. Coaching and practice** | Selected findings become targeted instruction, a knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment and can save results for replay. |
+
+The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training.
 
 `get_data.py` prepares records and calculates defect rates. `prompts.py` defines the diagnosis and coaching instructions. `harness_client.py` is the AWS boundary and parses the streamed AgentCore response. `pipeline.py` verifies citations, attaches Python-calculated metrics, manages reviewed findings, and checks whether generated modules contain expected elements. `app.py` brings the stages together in Streamlit. `main.py` provides terminal checks.
 
@@ -145,8 +190,8 @@ requirements.lock          Tested Python 3.12 versions
 
 ## Team and next steps
 
-My teammates were **Kevin, Jackendy, Kylee, Jack and Nelson**. I credit them as collaborators without guessing their individual code ownership. For the next revision, I want a genuine screen recording of the sanitized app and authorized test evidence for the live AWS workflow.
+My teammates were **Kevin, Jackendy, Kylee, Jack and Nelson**. We worked on the same competition project, and I have kept the contributions I can personally account for separate from the team's overall work.
 
-The current source and public walkthrough let a hiring manager inspect the code and reproduce the offline flow. If an interviewer asks what I personally fixed or why a control exists, I can explain the change and point to the relevant module.
+The next steps are to capture the current Streamlit workflow, finish authorized testing against the live AWS harness, and compare the coaching output with actual follow-up QA results if those become available.
 
-*ResultsCX and AWS are trademarks of their owners. This is an independent student-team competition portfolio, not an official product or employment project.*
+*ResultsCX and AWS are trademarks of their owners. This is an independent student-team project, not an official ResultsCX or AWS product.*
