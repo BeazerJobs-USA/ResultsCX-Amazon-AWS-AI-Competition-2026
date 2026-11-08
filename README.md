@@ -2,7 +2,7 @@
 
 ### Agent QA Review | Python, Streamlit, and Amazon Bedrock AgentCore
 
-I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
+I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with Kevin Jackendy, Kylee, Jack Nelson in the ResultsCX and AWS AI College Competition.
 
 Our team built a QA diagnosis and coaching prototype. The idea was straightforward: read scored customer-service evaluations, identify where an agent is struggling, let a supervisor review the finding, then generate training and practice material for the specific issue. We presented a working team demonstration to the judges and received positive feedback on our technical execution.
 
