@@ -1,0 +1,38 @@
+# Local Python environment and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+credentials
+
+# Private competition data and local run outputs
+data/
+private_data/
+raw_data/
+outputs/
+output/
+runs/
+logs/
+*.log
+
+# Local spreadsheet exports (use reviewed synthetic fixtures if needed)
+*.xlsx
+*.xls
+*.csv
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
