@@ -1,6 +1,8 @@
-# Security and data-handling notes
+# Security and data handling notes
 
-I configured the default workflow to use invented QA records, so the application runs without company files or AWS access. The private-data parser has limited masking, and those regex checks do not establish that all personal information was removed.
+The healthcare member service use case made confidentiality an important design requirement. The goal of the public version is simple: use synthetic data by default, minimize sensitive information before model use, require explicit choices before private data can be read or sent to AWS, and keep credentials and company files out of the repository.
+
+These are **HIPAA aware privacy and confidentiality controls**, not a claim of HIPAA compliance. I configured the default workflow to use invented QA records, so the application runs without company files or AWS access. The private data parser has limited masking, and those regex checks do not establish that all personal information was removed.
 
 ## Controls present in the public code
 
