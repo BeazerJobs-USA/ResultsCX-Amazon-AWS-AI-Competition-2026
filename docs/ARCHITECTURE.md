@@ -23,7 +23,7 @@ I kept the processing stages separate because the QA numbers, model interpretati
 | **3. Supervisor review** | A manager or supervisor can edit the cause, intervention, notes, and training selection | Reviewed findings; excluded findings do not generate modules |
 | **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
 
-The [main README](../README.md#the-application) illustrates the full set of actions and output branches.
+The [main README](../README.md#the-application) illustrates the four stages. I also keep a [full-size SVG](architecture-flow.svg) and its editable [Graphviz source](architecture-flow.dot) here.
 
 The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
 

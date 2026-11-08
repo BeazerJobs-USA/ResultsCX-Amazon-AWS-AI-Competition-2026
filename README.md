@@ -22,50 +22,9 @@ The synthetic walkthrough is deliberately **not** presented as AI output, an act
 
 I used Streamlit to connect four parts of the process. The dashboard lets supervisors move from QA findings to a specific coaching decision, while the AI handles the diagnosis draft and the training content for selected findings.
 
-```mermaid
-flowchart LR
-    subgraph S1["1. QA intake | Python"]
-        direction TB
-        A1["Scored QA records or synthetic examples"] --> A2["Normalize evidence and calculate defect rates"]
-    end
-    subgraph S2["2. Diagnosis | AI and Python"]
-        direction TB
-        B1["Bedrock AgentCore drafts an analysis"] --> B2["Observed issues, possible causes and interventions"]
-        B2 --> B3["Python validates citations and attaches calculated metrics"]
-    end
-    subgraph S3["3. Decisions | Supervisor or manager"]
-        direction TB
-        C1["Review evidence, defect rate and proposed cause"] --> C2{"Choose an action"}
-        C2 -->|Revise| C3["Edit cause, intervention and notes"]
-        C2 -->|Include| C4["Approve finding for coaching"]
-        C3 --> C4
-        C2 -->|Exclude| C5["Exclude finding from coaching"]
-    end
-    subgraph S4["4. Coaching and practice | AI output"]
-        direction TB
-        D1["Generate a module for each approved finding"]
-        D1 --> D2["Coach: learning objective, instruction and feedback"]
-        D1 --> D3["Quiz: question, answer and explanation"]
-        D1 --> D4["Practice: trainee steps and scoring criteria"]
-        D1 --> D5["Customer scenario: fictional member, issue and expected response"]
-        D5 --> D6["Agent/member roleplay script with decision branches"]
-        D2 --> D7["Check training alignment and optionally save results"]
-        D3 --> D7
-        D4 --> D7
-        D6 --> D7
-    end
-    A2 --> B1
-    B3 --> C1
-    C4 --> D1
-    classDef data fill:#e9f4ff,stroke:#3078be,color:#14273d,stroke-width:1px
-    classDef ai fill:#f0eafe,stroke:#8655ba,color:#2a1945,stroke-width:1px
-    classDef human fill:#e5f5ef,stroke:#338e6a,color:#153c31,stroke-width:1px
-    classDef training fill:#fff3dc,stroke:#bf8a28,color:#523b13,stroke-width:1px
-    class A1,A2 data
-    class B1,B2,B3 ai
-    class C1,C2,C3,C4,C5 human
-    class D1,D2,D3,D4,D5,D6,D7 training
-```
+[![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
+
+**[Open the full-size architecture diagram](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)**. The SVG stays sharp when zoomed in.
 
 | Stage | What happens |
 | --- | --- |

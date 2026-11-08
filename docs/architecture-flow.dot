@@ -1,0 +1,66 @@
+digraph AgentQA {
+  graph [
+    rankdir=LR,
+    bgcolor="white",
+    pad="0.28",
+    nodesep="0.48",
+    ranksep="0.82",
+    splines=polyline
+  ];
+  node [shape=plain, fontname="Arial", fontcolor="#17283E"];
+  edge [color="#61758F", penwidth=2.2, arrowsize=0.9];
+
+  qa [label=<
+    <TABLE BORDER="1" COLOR="#75A9E5" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDF5FF">
+      <TR><TD BGCOLOR="#D0E5FF"><FONT FACE="Arial" POINT-SIZE="18"><B>01  QA INTAKE</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Python data processing</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Scored QA records<BR/>or synthetic examples</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#42607C">↓</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Normalize evidence<BR/>and link record IDs</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#42607C">↓</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Calculate behavior-level<BR/>defect rates</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: metrics and evidence</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  diagnosis [label=<
+    <TABLE BORDER="1" COLOR="#AA91DD" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#F5F0FF">
+      <TR><TD BGCOLOR="#E3D9FB"><FONT FACE="Arial" POINT-SIZE="18"><B>02  AI DIAGNOSIS</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Bedrock AgentCore + Python</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Draft observed issue,<BR/>possible cause and intervention</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#765AA0">↓</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Distinguish QA evidence<BR/>from AI interpretation</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#765AA0">↓</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Validate cited record IDs,<BR/>quotes and calculated metrics</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#6B4D96">Output: checked diagnosis draft</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  review [label=<
+    <TABLE BORDER="1" COLOR="#68B98F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDFAF2">
+      <TR><TD BGCOLOR="#CEEEDB"><FONT FACE="Arial" POINT-SIZE="18"><B>03  SUPERVISOR REVIEW</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Manager or supervisor decision</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Read cited evidence,<BR/>defect rate and proposed cause</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓  Choose an action</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Revise:</B> cause, intervention, notes<BR/><B>Include:</B> approve for coaching<BR/><B>Exclude:</B> skip this finding</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓</FONT></TD></TR>
+      <TR><TD BGCOLOR="#DFF5E7"><FONT FACE="Arial">Only approved findings<BR/>move into training</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#286C48">Output: reviewed coaching selection</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  coaching [label=<
+    <TABLE BORDER="1" COLOR="#DFAF57" CELLBORDER="0" CELLSPACING="0" CELLPADDING="12" BGCOLOR="#FFF8EA">
+      <TR><TD BGCOLOR="#FFE3AB"><FONT FACE="Arial" POINT-SIZE="18"><B>04  COACHING + PRACTICE</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>AI-generated training modules</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Coach:</B> learning objectives,<BR/>instructions and feedback</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Knowledge check:</B> question,<BR/>answer and explanation</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Guided practice:</B> trainee steps<BR/>and success criteria</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Customer scenario:</B> fictional<BR/>member persona and issue</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Roleplay:</B> scripted agent/member<BR/>responses and decision branches</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFEBC6"><FONT FACE="Arial">Check alignment; optionally<BR/>save and replay the result</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  qa -> diagnosis -> review -> coaching;
+}
