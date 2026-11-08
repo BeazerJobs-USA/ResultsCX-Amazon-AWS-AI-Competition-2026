@@ -1,6 +1,6 @@
-# Screenshot notes
+# Product experience and screenshot notes
 
-These two images show the intended coaching experience. They are **illustrative mockups**, not captures from the current `app.py` code. The working Streamlit implementation has four stages and a different layout.
+These two images show the broader coaching experience our competition concept was aiming for: turning a QA finding into focused coaching, a knowledge check, guided practice, and realistic roleplay. They are **illustrative mockups**, not captures from the current `app.py` code. The working Streamlit implementation uses the same core four stage idea with a different layout.
 
 ## Roleplay concept
 
@@ -14,7 +14,7 @@ This concept image shows a fictional Case F2 documentation problem, roleplay bra
 
 This concept image shows a fictional Case F1 verification problem, a learning objective, an alignment table, and a simulated training-time cost. The visible desktop date is not evidence of when the 2026 competition occurred.
 
-## What I want to add next
+## What the visuals prove and what they do not
 
-A genuine capture of the public Streamlit walkthrough, with the exact code revision, capture date, and **SYNTHETIC** label. Until then, the mockups remain clearly separated from verified runtime evidence. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings.
+The mockups are useful as product design references, but they are not runtime evidence. A future improvement is a genuine capture of the public Streamlit walkthrough with the exact code revision, capture date, and **SYNTHETIC** label. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings.
 
