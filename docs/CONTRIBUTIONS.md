@@ -18,10 +18,12 @@ Later code revisions added synthetic sample data, tighter citation checks, priva
 In a later portfolio revision, I extended the app with three small, understandable features. These are **my later improvements to the publicly documented project**, not features I am claiming were deployed in the September competition:
 
 1. **Pre-model data sanitization:** I added `security_controls.py` and wired it through `pipeline.build_safe_model_payload()` and `pipeline.sanitize_model_prompt()`. It checks every nested text field in the model-facing QA summary, and checks complete prompts after supervisor edits, for recognizable personal identifiers. Both the diagnosis path and the optional Bedrock tool response use the filtered data.
-2. **Potential-critical compliance alerts:** I added a deterministic rule that picks up failed `CO` evaluations mentioning identity verification or privacy. The Supervisor Review UI highlights affected record IDs immediately, without making an AI model decide whether an issue deserves attention. This is in-app escalation for review, not a sent incident ticket or legal finding.
+2. **Compliance review alerts:** I added a deterministic rule that picks up failed `CO` evaluations. I later corrected it to include all failed compliance rows, because keyword-only checks could miss genuine failed QA controls. The Supervisor Review UI highlights affected record IDs immediately and prioritizes identity/privacy matches, without making an AI model decide whether an issue deserves attention. This is in-app escalation for review, not a sent incident ticket or legal finding.
 3. **Interactive business impact:** I added `business_impact.py` and the editable calculator on the first Streamlit screen. It compares manual versus AI-assisted preparation **including supervisor review** and shows scenario hours per week, per year, and potential labor-capacity value. Numbers are assumptions until a real pilot measures them.
 
 I commented the code and added synthetic-only unit tests and app-flow checks so these controls can be explained, reviewed, and reproduced without confidential records or paid model access. I have not verified that the new privacy filter catches every kind of protected health information or that the risk alert captures every possible violation.
+
+In a subsequent reliability review I added tests for live configuration errors, calculator updates, interrupted model streams, malformed JSON values, and repeated tool requests. I also corrected evidence verification to check sanitized quotes and added a configurable AWS read timeout. These are later maintenance improvements; I have not claimed that I operated or stress-tested the team's original live AWS runtime.
 
 ## Team credit
 

@@ -71,9 +71,8 @@
 <text text-anchor="start" x="566.5" y="-471.1" font-family="Arial" font-weight="bold" font-size="18.00" fill="#17283e">03 &#160;SUPERVISOR REVIEW</text>
 <text text-anchor="start" x="588.5" y="-425.9" font-family="Arial" font-weight="bold" font-size="12.00" fill="#17283e">Manager or supervisor decision</text>
 <polygon fill="#fff0d8" stroke="transparent" points="551.5,-348.5 551.5,-406.5 806.5,-406.5 806.5,-348.5 551.5,-348.5"/>
-<text text-anchor="start" x="599" y="-381.3" font-family="Arial" font-weight="bold" font-size="14.00" fill="#17283e">Urgent review flag:</text>
-<text text-anchor="start" x="722" y="-381.3" font-family="Arial" font-size="14.00" fill="#17283e"> failed</text>
-<text text-anchor="start" x="597" y="-367.3" font-family="Arial" font-size="14.00" fill="#17283e">identity/privacy QA controls</text>
+<text text-anchor="start" x="600.5" y="-381.3" font-family="Arial" font-weight="bold" font-size="14.00" fill="#17283e">Compliance review flag:</text>
+<text text-anchor="start" x="581" y="-367.3" font-family="Arial" font-size="14.00" fill="#17283e">all failed controls; privacy priority</text>
 <polygon fill="#ffffff" stroke="transparent" points="551.5,-288.5 551.5,-348.5 806.5,-348.5 806.5,-288.5 551.5,-288.5"/>
 <text text-anchor="start" x="615.5" y="-322.3" font-family="Arial" font-size="14.00" fill="#17283e">Read cited evidence,</text>
 <text text-anchor="start" x="584" y="-307.3" font-family="Arial" font-size="14.00" fill="#17283e">defect rate and proposed cause</text>

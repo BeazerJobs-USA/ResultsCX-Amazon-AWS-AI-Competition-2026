@@ -24,6 +24,10 @@ HARNESS_ARN_PATTERN = re.compile(
     r"^arn:([^:]+)?:bedrock-agentcore:([a-z0-9-]+):[0-9]{12}:harness/[A-Za-z][A-Za-z0-9_]{0,39}-[A-Za-z0-9]{10}$"
 )
 
+# Stop waiting for an idle AWS response after two minutes by default. This is
+# a socket read timeout, not a guarantee on the total time for several modules.
+DEFAULT_READ_TIMEOUT = 120
+
 
 class HarnessError(Exception):
     """Raised for a failed or invalid Bedrock harness request."""
@@ -77,15 +81,19 @@ def get_config():
     max_tokens = os.environ.get("HARNESS_MAX_TOKENS", "").strip()
     if max_tokens and (not max_tokens.isdecimal() or int(max_tokens) <= 0):
         raise HarnessError("HARNESS_MAX_TOKENS must be a positive integer")
+    timeout = os.environ.get("HARNESS_READ_TIMEOUT", str(DEFAULT_READ_TIMEOUT)).strip()
+    if not timeout.isdecimal() or not 15 <= int(timeout) <= 600:
+        raise HarnessError("HARNESS_READ_TIMEOUT must be 15 to 600 seconds")
     return {
         "harness_arn": arn,
         "region": region,
         "max_tokens": int(max_tokens) if max_tokens.isdigit() else None,
         "model_id": os.environ.get("BEDROCK_MODEL_ID", "").strip() or None,
+        "read_timeout": int(timeout),
     }
 
 
-def make_client(region):
+def make_client(region, read_timeout=DEFAULT_READ_TIMEOUT):
     try:
         import boto3
         from botocore.config import Config
@@ -98,7 +106,7 @@ def make_client(region):
         "bedrock-agentcore",
         region_name=region,
         config=Config(
-            connect_timeout=15, read_timeout=300, retries={"max_attempts": 2}
+            connect_timeout=15, read_timeout=read_timeout, retries={"max_attempts": 2}
         ),
     )
 
@@ -142,6 +150,12 @@ def parse_stream(stream, on_text=None):
             f"Bedrock returned {code}.\n"
             "What failed: harness_client.parse_stream (the AWS event stream itself raised an error)\n"
             f"{hint}"
+        ) from e
+    except botocore.exceptions.ReadTimeoutError as e:
+        raise HarnessError(
+            "Bedrock stopped sending stream data before the read timeout. "
+            "The request did not finish. Retry once or increase "
+            "HARNESS_READ_TIMEOUT for an approved slow-running harness."
         ) from e
 
 
@@ -276,7 +290,9 @@ class HarnessSession:
 
     def __init__(self, tools=None, client=None, config=None, max_tool_rounds=4):
         self.config = config or get_config()
-        self.client = client or make_client(self.config["region"])
+        self.client = client or make_client(
+            self.config["region"], self.config.get("read_timeout", DEFAULT_READ_TIMEOUT)
+        )
         self.session_id = new_session_id()
         self.tools = tools or {}
         self.max_tool_rounds = max_tool_rounds
@@ -329,6 +345,10 @@ class HarnessSession:
                 f"What failed: harness_client.HarnessSession._invoke\n{hint}"
             ) from e
         self.calls += 1
+        if not isinstance(response, dict) or "stream" not in response:
+            raise HarnessError(
+                "The AWS response did not contain an event stream. Check the harness configuration."
+            )
         turn = parse_stream(response["stream"], on_text=on_text)
         self.total_input_tokens += turn.input_tokens
         self.total_output_tokens += turn.output_tokens
@@ -337,13 +357,15 @@ class HarnessSession:
     def ask(self, user_text, system_prompt=None, on_text=None):
         """Send one user message and return the model's final text (after any tool rounds)."""
         messages = [{"role": "user", "content": [{"text": user_text}]}]
-        combined_text = ""
+        final_text = ""
         last_turn = None
         for round_no in range(self.max_tool_rounds + 1):
             turn = self._invoke(messages, system_prompt, on_text)
             last_turn = turn
-            combined_text += turn.text
             if not turn.tool_uses:
+                # Earlier tool rounds can include commentary or partial JSON.
+                # Only the final model reply should be parsed as a diagnosis/module.
+                final_text = turn.text
                 break
             if round_no == self.max_tool_rounds:
                 raise HarnessError(
@@ -399,7 +421,7 @@ class HarnessSession:
                                 "toolUseId": tu.tool_use_id,
                                 "status": "error",
                                 "content": [
-                                    {"text": f"Tool failed: {type(e).__name__}: {e}"}
+                                    {"text": f"Tool failed ({type(e).__name__}). Use the supplied QA summary."}
                                 ],
                             }
                         }
@@ -427,10 +449,10 @@ class HarnessSession:
                 f"The model did not finish normally (stopReason={stop}).\n"
                 "Fix: retry once. If it repeats, shorten the input (fewer evidence comments) or check the harness settings."
             )
-        if not combined_text.strip():
+        if not final_text.strip():
             raise HarnessError(
                 f"The model returned no text (stopReason={stop or 'unknown'}).\n"
                 "What failed: harness_client.HarnessSession.ask\n"
                 "Fix: retry; if it repeats, run  python main.py --debug  and send the event log to the team."
             )
-        return combined_text, last_turn
+        return final_text, last_turn

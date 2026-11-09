@@ -8,7 +8,7 @@ Our team built **Agent QA Review** to connect those steps. Python measures which
 
 **The value is the handoff:** one reviewed QA problem can travel from evidence to a specific practice activity without a supervisor having to assemble every training element from scratch. That lets the supervisor focus on deciding what the evidence means, checking the recommendation, and coaching the employee rather than starting each lesson plan from a blank page.
 
-**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review and compliance flags · tailored coaching and branching scripts · pre-model personal-data masking · interactive business impact calculator · **39 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md).
+**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review and compliance flags · tailored coaching and branching scripts · pre-model personal-data masking · interactive business impact calculator · **50 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md) · [Verification report](docs/VERIFICATION.md).
 
 [![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
 
@@ -131,7 +131,7 @@ The [full-size architecture diagram](https://raw.githubusercontent.com/BeazerJob
 | --- | --- |
 | **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The first screen also provides an interactive labor-hours calculator. The public walkthrough uses invented records. |
 | **2. AI diagnosis** | A second sanitization checkpoint scrubs recognizable personal identifiers from the AI payload and final prompt before Bedrock can receive them; the tool callback uses the same safe payload. Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks citations against loaded records. |
-| **3. Supervisor review** | Python rules immediately highlight failed identity/privacy compliance items for human attention, regardless of the model's conclusion. A supervisor can adjust the root cause and intervention, add notes, and include or exclude findings. The alert is in-app only; no external task is dispatched. |
+| **3. Supervisor review** | Python rules immediately flag **every failed Compliance QA item** for human review, with higher priority for identity/privacy keyword matches, regardless of the model's conclusion. A supervisor can adjust the root cause and intervention, add notes, and include or exclude findings. The alert is in-app only; no external task is dispatched. |
 | **4. Coaching and practice** | Selected findings become targeted instruction, a behavior-specific knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment, including whether the quiz references the target behavior, and can save results for read-only replay. |
 
 The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training. Compliance flags are rule-based **potential risks**, not verified incidents or declarations of legal violations.
@@ -161,7 +161,7 @@ Because the use case can involve healthcare member service data, confidentiality
 | **Employee pseudonyms** | The private data path replaces known employee identities with codes before model use. |
 | **Identifier masking** | The parser masks several common patterns such as emails, phone numbers, dates, provider references, and long identifiers. |
 | **Pre-model sanitization checkpoint** | `security_controls.py` scrubs nested payload text and final training/diagnosis prompts, including recognizable emails, phones, SSNs, labeled account/member IDs, dates, and configured staff names. Bedrock's data tool uses the same filtered payload. |
-| **Immediate in-app compliance flags** | In Supervisor Review, failed Compliance evaluations mentioning identity verification or privacy are visibly flagged using Python rules, before approval and independently of AI generation. No external notification is sent. |
+| **Immediate in-app compliance flags** | In Supervisor Review, all failed Compliance evaluations are flagged by Python rules; identity/privacy keywords receive urgent priority. No external notification is sent. |
 | **Private data read gate** | Private QA files are not read unless an explicit configuration switch is enabled. |
 | **Cloud send gate** | The private data path is blocked from being sent to AWS unless a separate explicit authorization switch is enabled. |
 | **Private output storage gate** | Derived private JSON is not written locally unless a separate storage switch is enabled. |
@@ -247,7 +247,7 @@ I run the offline tests with:
 python -m unittest discover -s tests -v
 ```
 
-**39 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, the Boto3 request shape, supervisor-to-training flow, actual Streamlit script progression, replay behavior, citation checks, behavior-matched quiz examples, incomplete-module rejection, private-data access guards, pre-model identifier masking, compliance-alert rules, and business-math scenarios. They do **not** invoke AWS or use confidential ResultsCX workbooks. The live harness connection requires separate authorized testing.
+**50 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, interrupted AWS streams, bounded tool-use rounds, the Boto3 request shape, supervisor-to-training flow, real Streamlit script progression and calculator input changes, replay behavior, citation checks including sanitized quotes, behavior-matched quiz examples, malformed model output, private-data guards, identifier masking, compliance-alert rules, and business-math scenarios. They do **not** invoke AWS. Local-only structure checks on separately provided workbooks were also performed without including those files in the repository. The live harness and end-user browser behavior require separate authorized/environment testing. See [Verification](docs/VERIFICATION.md).
 
 The dashboard examples use invented cases. No post-training QA comparison has been supplied, so I don't claim an actual reduction in defects or real labor savings. This is a student competition project, not a deployed ResultsCX system.
 

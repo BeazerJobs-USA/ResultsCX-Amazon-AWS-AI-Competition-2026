@@ -22,12 +22,14 @@ I kept the processing stages separate because the QA numbers, model interpretati
 | --- | --- | --- |
 | **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations. An interactive calculator models potential time savings with adjustable assumptions. | Behavior metrics, agent-date proxy counts, evidence rows, and hypothetical business case |
 | **2. AI diagnosis** | `build_safe_model_payload()` and `sanitize_model_prompt()` mask recognized identifiers before the authorized harness sees the data, including in tool responses. | Proposed root causes, cited records, intervention suggestions and citation checks |
-| **3. Supervisor review** | A Python rule immediately flags failed `CO` identity/privacy items, independently of model conclusions. A manager can edit the cause, intervention, notes, and training selection. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
+| **3. Supervisor review** | A Python rule immediately flags all failed `CO` items, assigning higher review priority to identity/privacy keyword matches. This works independently of model conclusions. A manager can edit the cause, intervention, notes, and training selection. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
 | **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
 
 The [main README](../README.md#how-the-application-works) illustrates the four stages. I also keep a [full-size SVG](architecture-flow.svg) and its editable [Graphviz source](architecture-flow.dot) here.
 
 The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
+
+The harness client has a 120-second **idle stream read timeout** by default (configurable with `HARNESS_READ_TIMEOUT`, 15–600 seconds), translates interrupted streams into application errors, and limits repeated tool-use rounds. The timeout does not bound the *total* time of a session or five sequential training modules. The code cannot prove that a separately deployed AWS harness will respond or complete successfully.
 
 The sanitization happens **between intake and model invocation**, with a second pass on the final coaching prompt because supervisor notes may be added later. The immediate compliance flag runs on deterministic scored fields; it is an on-screen request for review, not a verified breach or an external incident notification. The labor calculator shows possible capacity (not actual payroll savings), including the human effort still required to review AI materials.
 

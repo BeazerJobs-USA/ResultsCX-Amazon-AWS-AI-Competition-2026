@@ -42,7 +42,7 @@ digraph AgentQA {
     <TABLE BORDER="1" COLOR="#68B98F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDFAF2">
       <TR><TD BGCOLOR="#CEEEDB"><FONT FACE="Arial" POINT-SIZE="18"><B>03  SUPERVISOR REVIEW</B></FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Manager or supervisor decision</B></FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial"><B>Urgent review flag:</B> failed<BR/>identity/privacy QA controls</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial"><B>Compliance review flag:</B><BR/>all failed controls; privacy priority</FONT></TD></TR>
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Read cited evidence,<BR/>defect rate and proposed cause</FONT></TD></TR>
       <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓  Choose an action</FONT></TD></TR>
       <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Revise:</B> cause, intervention, notes<BR/><B>Include:</B> approve for coaching<BR/><B>Exclude:</B> skip this finding</FONT></TD></TR>

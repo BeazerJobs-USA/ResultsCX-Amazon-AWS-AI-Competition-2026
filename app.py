@@ -520,20 +520,25 @@ if diag:
     st.header("3 · Supervisor review (Human Validation)")
     urgent_items = security_controls.critical_compliance_alerts(data)
     if urgent_items:
+        urgent_count = sum(
+            item["priority"].startswith("Urgent") for item in urgent_items
+        )
         # Deterministic alert: visible as soon as Stage 3 loads, before approval.
         # It does not contact anyone outside the app or declare a HIPAA violation.
-        st.error(
-            f"🚨 IMMEDIATE REVIEW NEEDED: {len(urgent_items)} potentially critical "
-            "identity/privacy compliance failure(s) in the QA scores. "
-            "Review these records and follow your organization's escalation policy. "
-            "AI diagnosis is not required to raise this flag."
+        alert_message = (
+            f"IMMEDIATE COMPLIANCE REVIEW NEEDED: {len(urgent_items)} failed compliance "
+            f"QA item(s), including {urgent_count} matching identity/privacy keywords. "
+            "Check the source records and follow your organization's escalation policy. "
+            "The flags do not depend on the AI diagnosis."
         )
+        (st.error if urgent_count else st.warning)(alert_message)
         st.dataframe(
             pd.DataFrame(
                 [
                     {
                         "record ID": item["record_id"],
                         "employee code": item["agent"],
+                        "review priority": item["priority"],
                         "failed control": security_controls.sanitize_text(item["behavior"])[0],
                         "action": "Supervisor review / compliance escalation",
                     }
@@ -544,8 +549,9 @@ if diag:
             hide_index=True,
         )
         st.caption(
-            "Rule: failed Compliance (CO) item referencing identity verification or privacy. "
-            "This is a potential-risk flag, not a verified incident, legal determination, "
+            "Rule: every failed Compliance (CO) item is flagged; identity/privacy "
+            "keywords receive urgent priority. This is a potential-risk flag, "
+            "not a verified incident, legal determination, "
             "external notification, or substitute for the supervisor's judgment."
         )
     else:
@@ -717,7 +723,8 @@ if diag:
                                 if result["errors"]
                                 else ""
                             ),
-                            state="complete",
+                            # Show partial failure instead of a green success state.
+                            state="error" if result["errors"] else "complete",
                             expanded=False,
                         )
                 elif sample_mode:

@@ -79,10 +79,11 @@ def sanitize_payload(value, known_names=()):
 
 
 def critical_compliance_alerts(data):
-    """Flag failed compliance items involving identity or privacy for human review.
+    """Flag *all* failed compliance items for human review.
 
-    This is an immediate in-app *flag*, not a legal determination or a sent alert.
-    It is based on scoring and simple keywords, without asking the AI to decide.
+    Identity/privacy keywords increase priority, but other compliance failures
+    must not disappear just because an evaluator used different wording. This
+    is an in-app *flag*, not a legal determination or a sent notification.
     """
     keywords = ("identit", "verif", "privacy", "disclos", "hipaa", "protected", "confidential")
     alerts = []
@@ -92,12 +93,14 @@ def critical_compliance_alerts(data):
             continue
         description = f"{record.get('behavior', '')} {record.get('comment', '')}".lower()
         record_id = record.get("record_id", "Unknown")
-        if any(word in description for word in keywords) and record_id not in seen:
+        if record_id not in seen:
+            sensitive = any(word in description for word in keywords)
             alerts.append(
                 {
                     "record_id": record_id,
                     "agent": record.get("agent", "Unknown"),
                     "behavior": record.get("behavior", "Compliance behavior"),
+                    "priority": "Urgent identity/privacy review" if sensitive else "Compliance review",
                 }
             )
             seen.add(record_id)

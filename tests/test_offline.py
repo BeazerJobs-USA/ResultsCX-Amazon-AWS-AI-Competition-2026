@@ -204,7 +204,7 @@ class SessionTests(unittest.TestCase):
             config=self.CONFIG,
         )
         text, turn = session.ask("analyse", system_prompt="You are a test.")
-        self.assertEqual(text, "Let me fetch the data.Hello world")
+        self.assertEqual(text, "Hello world")  # only final turn, not a tool-round preamble
         self.assertEqual(calls, [{"section": "all"}])
         self.assertEqual(len(client.requests), 2)
         first, second = client.requests
@@ -254,6 +254,48 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(hc.HarnessError) as ctx:
             session.ask("hi")
         self.assertIn("HARNESS_MAX_TOKENS", str(ctx.exception))
+
+    def test_stream_read_timeout_becomes_a_friendly_error(self):
+        import botocore.exceptions
+
+        def stalled_stream():
+            raise botocore.exceptions.ReadTimeoutError(endpoint_url="https://example.test")
+            yield  # make this an event-stream iterator
+
+        with self.assertRaises(hc.HarnessError) as ctx:
+            hc.parse_stream(stalled_stream())
+        self.assertIn("HARNESS_READ_TIMEOUT", str(ctx.exception))
+
+    def test_missing_aws_stream_is_not_an_uncaught_key_error(self):
+        class BrokenClient:
+            def invoke_harness(self, **kwargs):
+                return {"metadata": "stream missing"}
+
+        session = hc.HarnessSession(client=BrokenClient(), config=self.CONFIG)
+        with self.assertRaises(hc.HarnessError) as ctx:
+            session.ask("hi")
+        self.assertIn("event stream", str(ctx.exception))
+
+    def test_repeated_tool_calls_stop_after_configured_rounds(self):
+        session = hc.HarnessSession(
+            client=FakeClient([TOOL_STREAM] * 3),
+            config=self.CONFIG,
+            max_tool_rounds=2,
+        )
+        with self.assertRaises(hc.HarnessError) as ctx:
+            session.ask("hi")
+        self.assertIn("kept calling tools", str(ctx.exception))
+
+    def test_invalid_timeout_configuration_is_explained(self):
+        from unittest.mock import patch
+
+        with patch.dict(
+            "os.environ",
+            {"HARNESS_ARN": self.CONFIG["harness_arn"], "HARNESS_READ_TIMEOUT": "999"},
+        ):
+            with self.assertRaises(hc.HarnessError) as ctx:
+                hc.get_config()
+        self.assertIn("HARNESS_READ_TIMEOUT", str(ctx.exception))
 
     def test_bad_arn_is_explained(self):
         import os

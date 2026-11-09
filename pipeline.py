@@ -170,6 +170,10 @@ def validate_diagnosis(diagnosis, data):
             "The diagnosis JSON has no 'findings' list.\nType: model output problem. Fix: retry the analysis."
         )
     for i, f in enumerate(diagnosis["findings"], start=1):
+        if not isinstance(f, dict):
+            raise PipelineError(
+                f"Diagnosis finding {i} is not a JSON object. Retry the AI analysis."
+            )
         f.setdefault("id", f"F{i}")
         b = behaviors.get(str(f.get("behavior_id", "")).strip().upper())
         if b is None:
@@ -241,10 +245,15 @@ def validate_diagnosis(diagnosis, data):
                 and rec.get("source") == b.get("source")
             )
             comment = str(rec.get("comment") or "") if rec else ""
+            # Compare to what Bedrock actually saw. The second privacy pass
+            # may have replaced an identifier with [EMAIL] or [IDENTIFIER].
+            safe_comment, _ = security_controls.sanitize_text(
+                comment, known_staff_names(data)
+            )
             quote_matches = bool(
                 quote
                 and " ".join(quote.split()).casefold()
-                in " ".join(comment.split()).casefold()
+                in " ".join(safe_comment.split()).casefold()
             )
             is_verified = same_behavior and quote_matches
             item = {
@@ -272,12 +281,9 @@ def validate_diagnosis(diagnosis, data):
         f["evidence_verified"] = verified
         f["evidence_total"] = len(cleaned)
     diagnosis.setdefault("summary", "")
-    diagnosis["not_a_training_problem"] = [
-        str(x) for x in diagnosis.get("not_a_training_problem") or []
-    ]
-    diagnosis["open_questions"] = [
-        str(x) for x in diagnosis.get("open_questions") or []
-    ]
+    for key in ("not_a_training_problem", "open_questions"):
+        items = diagnosis.get(key)
+        diagnosis[key] = [str(x) for x in items] if isinstance(items, list) else []
     return diagnosis
 
 
@@ -489,6 +495,10 @@ def validate_module(module, finding, data=None):
     module["roleplay_script"] = [
         item for item in module["roleplay_script"] if isinstance(item, dict)
     ]
+    for turn in module["roleplay_script"]:
+        # An LLM can return a number/null where a speaker label is expected.
+        # Normalize it so validation shows an error instead of crashing the UI.
+        turn["speaker"] = str(turn.get("speaker") or "").upper()
     for key in ("knowledge_check", "hands_on_exercise", "simulation_scenario"):
         if not isinstance(module.get(key), dict):
             module[key] = {}

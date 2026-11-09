@@ -4,6 +4,7 @@ import copy
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -11,6 +12,8 @@ import business_impact  # noqa: E402
 import get_data  # noqa: E402
 import pipeline  # noqa: E402
 import security_controls  # noqa: E402
+from harness_client import HarnessError  # noqa: E402
+import sample_walkthrough  # noqa: E402
 
 
 class PrivacyCheckpointTests(unittest.TestCase):
@@ -70,13 +73,58 @@ class ComplianceAlertTests(unittest.TestCase):
         self.assertEqual({f["record_id"] for f in flags}, {"CO-001", "CO-003"})
         self.assertTrue(all(f["agent"].startswith("Agent-") for f in flags))
 
-    def test_noncompliance_sections_and_passing_items_do_not_raise_alert(self):
+    def test_noncompliance_and_passing_items_do_not_raise_alert(self):
         records = [
             {"record_id": "BP-1", "source": "BP", "result": "No", "behavior": "Verify identity"},
             {"record_id": "CO-1", "source": "CO", "result": "Yes", "behavior": "Verify identity"},
             {"record_id": "CO-2", "source": "CO", "result": "No", "behavior": "Read greeting"},
         ]
-        self.assertEqual(security_controls.critical_compliance_alerts({"records": records}), [])
+        # A failed CO row still merits review even without privacy keywords.
+        flags = security_controls.critical_compliance_alerts({"records": records})
+        self.assertEqual([f["record_id"] for f in flags], ["CO-2"])
+        self.assertEqual(flags[0]["priority"], "Compliance review")
+
+    def test_compliance_identity_failure_gets_urgent_priority(self):
+        data = get_data.get_all_data(source_override="synthetic")
+        flags = security_controls.critical_compliance_alerts(data)
+        self.assertTrue(all(f["priority"].startswith("Urgent") for f in flags))
+
+
+class UnexpectedModelOutputTests(unittest.TestCase):
+    def test_sanitized_evidence_quote_can_still_verify(self):
+        data = get_data.get_all_data(source_override="synthetic")
+        behavior = data["behaviors"][0]
+        evidence = behavior["evidence"][0]
+        row = next(r for r in data["records"] if r["record_id"] == evidence["record_id"])
+        row["comment"] = "Member contact: jane@example.org"
+        diagnosis = {"findings": [{
+            "behavior_id": behavior["id"],
+            "evidence": [{"record_id": row["record_id"], "quote": "Member contact: [EMAIL]"}],
+        }]}
+        validated = pipeline.validate_diagnosis(diagnosis, data)
+        self.assertEqual(validated["findings"][0]["evidence_verified"], 1)
+
+    def test_malformed_finding_is_reported_as_pipeline_error(self):
+        data = get_data.get_all_data(source_override="synthetic")
+        with self.assertRaises(pipeline.PipelineError):
+            pipeline.validate_diagnosis({"findings": [None]}, data)
+
+    def test_failed_live_module_is_reported_without_crashing_other_stages(self):
+        class FailedSession:
+            session_id = "test-session"
+
+            def ask(self, *_args, **_kwargs):
+                raise HarnessError("Model response timed out")
+
+        data = get_data.get_all_data(source_override="synthetic")
+        approved = pipeline.build_approved_findings(
+            sample_walkthrough.demo_diagnosis(data), {}
+        )[:1]
+        with patch.object(pipeline, "save_json", return_value=None):
+            result = pipeline.run_training(FailedSession(), approved, data)
+        self.assertEqual(result["modules"], [])
+        self.assertEqual(len(result["errors"]), 1)
+        self.assertIn("timed out", result["errors"][0]["error"])
 
 
 class BusinessCalculatorTests(unittest.TestCase):

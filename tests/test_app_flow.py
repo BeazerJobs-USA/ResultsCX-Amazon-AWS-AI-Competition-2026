@@ -401,7 +401,7 @@ class AppFlowTests(unittest.TestCase):
         self.assertIn("APPROVE DIAGNOSIS", drawn(st, "button"))
         self.assertIn("2 · AI diagnosis", drawn(st, "header"))
         self.assertIn("3 · Supervisor review", drawn(st, "header"))
-        self.assertIn("IMMEDIATE REVIEW NEEDED", drawn(st, "error"))
+        self.assertIn("IMMEDIATE COMPLIANCE REVIEW NEEDED", drawn(st, "error"))
         self.assertIn("Interactive business impact", drawn(st, "expander"))
         self.assertIsNone(state.training)
 

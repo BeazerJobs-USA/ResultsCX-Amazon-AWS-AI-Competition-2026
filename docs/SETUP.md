@@ -39,6 +39,8 @@ I only use this with a harness and account the team is authorized to access:
 
 `HARNESS_ARN` is a **harness ARN**. The client calls `invoke_harness`, not `invoke_agent_runtime`. The current SDK contract expects `harnessArn`, a string `runtimeSessionId` and `messages`. AWS permission and region checks depend on the actual deployment.
 
+`HARNESS_READ_TIMEOUT` is optional and defaults to 120 seconds. It sets how long a single AWS stream read may be idle before the SDK raises an error. It does **not** impose a hard end-to-end deadline on multiple training modules. No live AWS availability is implied by the offline tests.
+
 ## If something breaks
 
 | Symptom | First check |
@@ -48,9 +50,12 @@ I only use this with a harness and account the team is authorized to access:
 | Harness ARN rejected | Replace the placeholder with the authorized harness ARN; verify the region. |
 | No AWS credentials | Use a valid profile or role. The public walkthrough requires none. |
 | Boto3 session type error | `runtimeSessionId` needs `str(uuid.uuid4())`, not a UUID object. |
+| Live model appears stuck | Check the current Stage 2/4 status; after a stream read timeout the UI reports an error. Check `HARNESS_READ_TIMEOUT` and the authorized harness logs. |
 | A replay has no data | Complete an authorized Live-mode flow to save diagnosis, approval, and training output. The handwritten walkthrough does not create saved runs. |
 
 Replay displays a completed saved diagnosis and training package with its original recorded approval when one exists. It does not generate new modules or record a new supervisor decision. A diagnosis-only run cannot be replayed as a completed training package.
 
 The private-data path is described in [Security](SECURITY.md). I keep it disabled unless the dataset and processing environment are approved for that use.
+
+For an authorized *local-only* private-data intake check, the parser expects the following files in a separate, Git-ignored `data/` folder: `process_qa.xlsx`, `compliance_qa.xlsx`, `experience_qa.xlsx`, and `training_outline.xlsx`. The upstream exports may have longer filenames, so rename local copies to these expected names. The private-data switches are not permission to upload real member information to AWS. **Never commit the original exports or any result containing private records.**
 
