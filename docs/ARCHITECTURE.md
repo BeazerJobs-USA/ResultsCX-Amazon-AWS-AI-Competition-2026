@@ -1,61 +1,48 @@
 # Architecture notes
 
-I kept the processing stages separate because the QA numbers, model interpretation, supervisor judgment, and training output should not be treated as the same kind of evidence.
+I kept the logic, the screens and the AWS boundary in separate layers so each can be tested alone, and so the QA numbers, the model's interpretation, the supervisor's judgment and the training output are never mixed up as one kind of evidence.
 
-## What the code does
+![Four-stage workflow](architecture-flow.svg)
 
-| Module | What it does |
-| --- | --- |
-| `get_data.py` | Loads nine invented QA records by default. With explicit authorization switches, it can read local Excel exports and apply limited masking. It computes the rates in Python. |
-| `security_controls.py` | Applies a second regex-based pass to all nested model-facing strings. Separately identifies scored identity/privacy compliance failures for urgent in-app human review. |
-| `business_impact.py` | Computes editable supervisor preparation hours per week/year and corresponding hypothetical labor-capacity value. |
-| `prompts.py` | Renders the metrics/evidence into a JSON-constrained diagnosis prompt and a separate prompt for each selected coaching module. |
-| `harness_client.py` | Builds `InvokeHarness` requests, handles streamed text/tool events, and gives common failures actionable messages. It reuses one string session ID for related requests. |
-| `pipeline.py` | Enforces the final pre-AWS sanitization boundary for both prompts and tool payloads, validates JSON, matches citations, excludes unverified records from training, applies supervisor edits, requests training, checks alignment, and optionally saves results. |
-| `app.py` | Presents QA data, diagnosis, review and coaching in Streamlit. Supports live, saved-run and synthetic walkthrough modes. |
-| `sample_walkthrough.py` | Provides handwritten fictional findings and modules for an AWS-free public demonstration. |
-| `main.py` | Supports offline checks and an explicitly requested live terminal run. |
+The editable [Graphviz source](architecture-flow.dot) sits beside the [SVG](architecture-flow.svg).
 
-## Stage boundaries
+## Layers
 
-| Stage | Input and decision | Output |
+| Layer | Modules | Rule |
 | --- | --- | --- |
-| **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations. An interactive calculator models potential time savings with adjustable assumptions. | Behavior metrics, agent-date proxy counts, evidence rows, and hypothetical business case |
-| **2. AI diagnosis** | `build_safe_model_payload()` and `sanitize_model_prompt()` mask recognized identifiers before the authorized harness sees the data, including in tool responses. | Proposed root causes, cited records, intervention suggestions and citation checks |
-| **3. Supervisor review** | A Python rule immediately flags all failed `CO` items, assigning higher review priority to identity/privacy keyword matches. This works independently of model conclusions. A manager can edit the cause, intervention, notes, and training selection. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
-| **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
+| Entry point | `app.py` | Sets page config, initializes state, draws the sidebar and header, opens one workspace. 36 lines. |
+| Screens | `ui/` | One module per workspace (`dashboard`, `intake`, `diagnosis`, `review`, `coaching`, `compliance`, `referral`, `audit`) plus `shell`, `state`, `actions`, `components`. The only code that imports Streamlit, apart from `app.py`. |
+| Workflow logic | `workflow/` | Plain Python with no Streamlit import: `intake`, `review`, `compliance`, `coaching`, `referrals`, `analytics`, `audit`, `operations`, `common`. Raises `WorkflowError` and leaves the store untouched on failure. |
+| Data and rules | `get_data.py`, `security_controls.py`, `business_impact.py` | Dataset building, masking and escaping, estimate math. |
+| AI boundary | `prompts.py`, `harness_client.py`, `pipeline.py` | Prompts, the `InvokeHarness` client, and everything that checks what comes back. |
+| Offline content | `sample_walkthrough.py`, `sample_data/` | Invented records and handwritten findings. |
 
-The [main README](../README.md#how-the-application-works) illustrates the four stages. I also keep a [full-size SVG](architecture-flow.svg) and its editable [Graphviz source](architecture-flow.dot) here.
+## Session state
 
-The live code uses **one AgentCore harness session** and sequential prompts for diagnosis and approved findings. There is no demonstrated network of independently deployed specialist agents. The supervisor step happens in the Streamlit UI; CLI `--full` uses a clearly labeled test-only automatic selection and should not be counted as human approval.
+All decisions, drafts and selections live in plain dictionaries in `st.session_state` (`store`, `drafts`, `ui`, `practice`), never only in a widget. Streamlit discards a widget's value when the widget isn't drawn on a run, so a value typed before a change of workspace would be lost otherwise. Input helpers in `ui/components.py` write each value to its dictionary from both the widget's return value and an `on_change` callback.
 
-The harness client has a 120-second **idle stream read timeout** by default (configurable with `HARNESS_READ_TIMEOUT`, 15–600 seconds), translates interrupted streams into application errors, and limits repeated tool-use rounds. The timeout does not bound the *total* time of a session or five sequential training modules. The code cannot prove that a separately deployed AWS harness will respond or complete successfully.
+The **case store** (`workflow/operations.py`) holds `flags`, `decisions`, `packages`, `trackers`, `referrals` and `audit`. Every change goes through an operation that validates first, works on copies, and commits only if every step succeeds.
 
-The sanitization happens **between intake and model invocation**, with a second pass on the final coaching prompt because supervisor notes may be added later. The immediate compliance flag runs on deterministic scored fields; it is an on-screen request for review, not a verified breach or an external incident notification. The labor calculator shows possible capacity (not actual payroll savings), including the human effort still required to review AI materials.
+Streamlit won't let a widget's key change after the widget exists, so a navigation request made mid-run is stored as `pending_nav` and applied at the top of the next run.
 
-## Verification details
+## Data flow
 
-I changed citation validation because the original implementation treated an existing record ID as verified even when it belonged to a different QA behavior. It also did not verify that the model's quoted words actually appeared in the record.
+1. **Intake.** `get_data.dataset_from_records` builds one dataset shape from the synthetic fixture, an upload, or a local export. `workflow.intake.data_checks` must pass before analysis can start.
+2. **Diagnosis.** Offline, `sample_walkthrough.demo_diagnosis` supplies handwritten findings. Live, `pipeline.run_diagnosis` sends the masked payload through one harness session. Either way `pipeline.validate_diagnosis` checks citations and recomputes metrics.
+3. **Review.** `workflow.review.validate` checks a decision. `operations.record_decision` keeps the AI's original text (`ai_original`) beside the final text, updates related flags, and appends to the audit chain.
+4. **Coaching.** The supervisor's component choice goes into `prompts.build_training_prompt`. `pipeline.merge_training` replaces only the modules that were regenerated, so a failed regeneration never discards an earlier package.
 
-Now the diagnosis check requires all three:
+## Risk rules
 
-1. The record ID exists.
-2. The record is for the same scored behavior and section.
-3. The quoted phrase appears in the stored evaluator comment after whitespace/case normalization.
+`workflow/compliance.py` classifies each failed requirement into an issue category, starts at that category's base level, raises it one level for a repeat miss by the same employee, and one more for a comment that mentions a person other than the verified member. The reasons are stored with the level. A reviewer can override the level with a required note, and the rule-based level is kept.
 
-For training-module references, the validator checks that a cited ID exists and belongs to the right behavior. The separate alignment function uses simple keyword overlap and checks for an objective, scenario, roleplay, and scoring criteria. **That is a heuristic**, not a semantic assessment or measured learning outcome.
+## One harness, not several agents
 
-Only verified citations to the selected behavior and QA source enter the training evidence prompt. Other failure comments for that same behavior and source can still provide supporting context. A new behavior-specific knowledge-check indicator makes superficial alignment gaps visible, but it remains a keyword heuristic rather than a guarantee of educational quality. Incomplete model-generated modules are rejected before being treated as completed training.
+The live code uses **one AgentCore harness session** with separate prompts for diagnosis and each coaching package. It is not a network of independently deployed agents, and I don't describe it as one. `harness_client.py` handles the streamed events, limits tool-use rounds, reports interrupted streams, and turns AWS failures into messages that say what to fix. `server_tool_use` and `mcp_tool_use` blocks are handled by the harness; only client tool requests are answered locally.
 
-Saved-run replay loads the original completed diagnosis, approval record when available, and training package together. It does not create a new approval for previously generated content. The public synthetic mode forces the synthetic fixture even when a local environment has private-data access enabled.
+## What I can't verify from this repository
 
-## What I cannot verify from this release
-
-- Live AWS credentials, permissions, and the deployed harness. The tests validate the Boto3 request against the SDK service model with a fake client; they do not contact AWS.
-- The original September demonstration's runtime state or deployment configuration. The supplied ZIP is one code snapshot, not a complete historical commit trail.
-- Production privacy controls. The private-data scrubber uses regexes and known names, which can miss identifiers. The public walkthrough avoids this by using invented records.
-- Training effectiveness. The screenshots show pending or simulated values, and no measured post-training data is available.
-
-Those are the current implementation boundaries; additional runtime and outcome validation remains separate work.
-
-
+- Live AWS credentials, permissions and the deployed harness. Tests use fake streams.
+- The September demonstration's runtime state.
+- Training effectiveness. No post-training QA data exists.
+- Behavior in a browser other than headless Chrome.

@@ -1,69 +1,74 @@
 digraph AgentQA {
-  graph [
-    rankdir=LR,
-    bgcolor="white",
-    pad="0.28",
-    nodesep="0.48",
-    ranksep="0.82",
-    splines=polyline
-  ];
+  graph [rankdir=LR, bgcolor="white", pad="0.28", nodesep="0.48", ranksep="0.82", splines=polyline];
   node [shape=plain, fontname="Arial", fontcolor="#17283E"];
   edge [color="#61758F", penwidth=2.2, arrowsize=0.9];
 
-  qa [label=<
-    <TABLE BORDER="1" COLOR="#75A9E5" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDF5FF">
-      <TR><TD BGCOLOR="#D0E5FF"><FONT FACE="Arial" POINT-SIZE="18"><B>01  QA INTAKE</B></FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Python data processing</B></FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Scored QA records<BR/>or synthetic examples</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#42607C">↓</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Normalize evidence<BR/>and link record IDs</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#42607C">↓</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Calculate behavior-level<BR/>defect rates</FONT></TD></TR>
-      <TR><TD BGCOLOR="#E2F3FF"><FONT FACE="Arial"><B>Privacy checkpoint:</B><BR/>mask model-bound identifiers</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Editable business case:<BR/>prep hours and labor value</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: metrics and evidence</FONT></TD></TR>
+  intake [label=<
+    <TABLE BORDER="1" COLOR="#75A9E5" CELLBORDER="0" CELLSPACING="0" CELLPADDING="14" BGCOLOR="#EDF5FF">
+      <TR><TD BGCOLOR="#D0E5FF"><FONT FACE="Arial" POINT-SIZE="18"><B>01  INTAKE + EVIDENCE</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Python, no AI</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Built-in synthetic data or an<BR/>uploaded CSV/JSON file</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Validate the file; replace names<BR/>with codes; mask identifiers</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Filter by employee, category,<BR/>risk, date, issue type, result</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Inspect evaluator comments<BR/>against the QA requirement</FONT></TD></TR>
+      <TR><TD BGCOLOR="#E2F3FF"><FONT FACE="Arial"><B>Data checks before any AI call</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: a selected set of QA requirements</FONT></TD></TR>
     </TABLE>
   >];
 
   diagnosis [label=<
-    <TABLE BORDER="1" COLOR="#AA91DD" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#F5F0FF">
-      <TR><TD BGCOLOR="#E3D9FB"><FONT FACE="Arial" POINT-SIZE="18"><B>02  AI DIAGNOSIS</B></FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Bedrock AgentCore + Python</B></FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Draft observed issue,<BR/>possible cause and intervention</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#765AA0">↓</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Distinguish QA evidence<BR/>from AI interpretation</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#765AA0">↓</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Validate cited record IDs,<BR/>quotes and calculated metrics</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#6B4D96">Output: checked diagnosis draft</FONT></TD></TR>
+    <TABLE BORDER="1" COLOR="#AA91DD" CELLBORDER="0" CELLSPACING="0" CELLPADDING="14" BGCOLOR="#F5F0FF">
+      <TR><TD BGCOLOR="#E3D9FB"><FONT FACE="Arial" POINT-SIZE="18"><B>02  DIAGNOSIS + RISK</B></FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>AgentCore harness or offline demo</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Recorded QA facts shown apart<BR/>from the AI proposal</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Possible root cause, risk, corrective<BR/>actions and stated uncertainty</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Python checks citations and<BR/>recomputes every metric</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial"><B>Rule-based risk level</B><BR/>(not a legal determination)</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: findings marked as AI proposals</FONT></TD></TR>
     </TABLE>
   >];
 
   review [label=<
-    <TABLE BORDER="1" COLOR="#68B98F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="15" BGCOLOR="#EDFAF2">
+    <TABLE BORDER="1" COLOR="#68B98F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="14" BGCOLOR="#EDFAF2">
       <TR><TD BGCOLOR="#CEEEDB"><FONT FACE="Arial" POINT-SIZE="18"><B>03  SUPERVISOR REVIEW</B></FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Manager or supervisor decision</B></FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial"><B>Compliance review flag:</B><BR/>all failed controls; privacy priority</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Read cited evidence,<BR/>defect rate and proposed cause</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓  Choose an action</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Revise:</B> cause, intervention, notes<BR/><B>Include:</B> approve for coaching<BR/><B>Exclude:</B> skip this finding</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" COLOR="#34865E">↓</FONT></TD></TR>
-      <TR><TD BGCOLOR="#DFF5E7"><FONT FACE="Arial">Only approved findings<BR/>move into training</FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#286C48">Output: reviewed coaching selection</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>A person decides</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Approve, reject, or request evidence</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Edit the finding; the AI original<BR/>is kept beside the final text</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Confirm the control was missed or<BR/>dismiss; refer a suspected privacy issue</FONT></TD></TR>
+      <TR><TD BGCOLOR="#DFF5E7"><FONT FACE="Arial">Notes are required to reject,<BR/>overturn or change a finding</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFF0D8"><FONT FACE="Arial">Related compliance flags update<BR/>and every step is audited</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: a recorded decision per finding</FONT></TD></TR>
     </TABLE>
   >];
 
   coaching [label=<
-    <TABLE BORDER="1" COLOR="#DFAF57" CELLBORDER="0" CELLSPACING="0" CELLPADDING="12" BGCOLOR="#FFF8EA">
+    <TABLE BORDER="1" COLOR="#DFAF57" CELLBORDER="0" CELLSPACING="0" CELLPADDING="14" BGCOLOR="#FFF8EA">
       <TR><TD BGCOLOR="#FFE3AB"><FONT FACE="Arial" POINT-SIZE="18"><B>04  COACHING + PRACTICE</B></FONT></TD></TR>
-      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>AI-generated training modules</B></FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Coach:</B> learning objectives,<BR/>instructions and feedback</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Knowledge check:</B> question,<BR/>answer and explanation</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Guided practice:</B> trainee steps<BR/>and success criteria</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Customer scenario:</B> fictional<BR/>member persona and issue</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial"><B>Roleplay:</B> scripted agent/member<BR/>responses and decision branches</FONT></TD></TR>
-      <TR><TD BGCOLOR="#FFEBC6"><FONT FACE="Arial">Check alignment; optionally<BR/>save and replay the result</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="12"><B>Only for approved findings</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Supervisor chooses the components<BR/>before anything is generated</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Graded knowledge check (80% to pass)<BR/>with an answer key</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Branching roleplay: choices lead<BR/>to different member reactions</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial">Guided practice, notes, remediation<BR/>plan, follow-up evaluation</FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFEBC6"><FONT FACE="Arial">Completion tracking per employee</FONT></TD></TR>
+      <TR><TD><FONT FACE="Arial" POINT-SIZE="11" COLOR="#385D80">Output: practice results and a package export</FONT></TD></TR>
     </TABLE>
   >];
 
-  qa -> diagnosis -> review -> coaching;
+  workflow [label=<
+    <TABLE BORDER="1" COLOR="#61758F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="10" BGCOLOR="#F4F6F9">
+      <TR><TD BGCOLOR="#E1E6ED"><FONT FACE="Arial" POINT-SIZE="14"><B>Compliance flags + audit trail</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial" POINT-SIZE="11">Failed items become flags with a rule-based<BR/>Low / Moderate / High / Critical level.<BR/>Each action is hash-chained in the audit log.</FONT></TD></TR>
+    </TABLE>
+  >];
+  referral [label=<
+    <TABLE BORDER="1" COLOR="#61758F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="10" BGCOLOR="#F4F6F9">
+      <TR><TD BGCOLOR="#E1E6ED"><FONT FACE="Arial" POINT-SIZE="14"><B>Administrative referral (simulation)</B></FONT></TD></TR>
+      <TR><TD BGCOLOR="#FFFFFF"><FONT FACE="Arial" POINT-SIZE="11">Written by a supervisor, kept in memory only.<BR/>No HR system is contacted; the AI never<BR/>recommends or imposes an action.</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  intake -> diagnosis -> review -> coaching;
+  review -> workflow [style=dashed, label="  updates", fontname="Arial", fontsize=11];
+  review -> referral [style=dashed, label="  optional", fontname="Arial", fontsize=11];
+  {rank=same; review; workflow}
 }

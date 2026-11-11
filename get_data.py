@@ -5,6 +5,8 @@ service. Private inputs must be reviewed before any external processing.
 No AWS calls are made in this module.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -12,8 +14,8 @@ import sys
 from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
-import openpyxl
 from dotenv import load_dotenv
 
 # --------------------------------------------------------------------------------------
@@ -46,6 +48,24 @@ QA_FILES = {
     ),
 }
 TRAINING_FILE = "training_outline.xlsx"
+
+# Fields a QA record may carry. Anything else in a public fixture or an upload is rejected
+# or dropped so stray identity columns cannot ride along into the review screens.
+RECORD_FIELDS = (
+    "record_id",
+    "source",
+    "section",
+    "team_lead",
+    "agent",
+    "call_date",
+    "behavior",
+    "result",
+    "comment",
+    "max_score",
+    "score",
+)
+# Optional supporting evidence. Shown only when a dataset actually supplies it.
+EVIDENCE_FIELDS = ("transcript_excerpt", "call_timestamp", "policy_reference")
 
 # Columns we expect in each QA export (checked explicitly so a renamed column gives a clear error).
 REQUIRED_COLUMNS = [
@@ -154,6 +174,19 @@ class Scrubber:
 # ======================================================================================
 # QA exports -> records
 # ======================================================================================
+def _open_workbook(path):
+    """Open an Excel export read-only. openpyxl is imported here because only the
+    opt-in private-data path needs it; the synthetic walkthrough does not."""
+    try:
+        import openpyxl
+    except ImportError as exc:  # pragma: no cover - depends on the local install
+        raise DataError(
+            "openpyxl is required to read private Excel exports. "
+            "Install the project requirements and retry."
+        ) from exc
+    return openpyxl.load_workbook(path, read_only=True, data_only=True)
+
+
 def _read_export(path):
     """Return (header, rows) for the first worksheet of a QA export, with a clear error if broken."""
     if not path.exists():
@@ -162,7 +195,7 @@ def _read_export(path):
             f"Expected location: {path}\n"
             f"Fix: copy the ResultsCX Excel files into the folder  {DATA_DIR}"
         )
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    wb = _open_workbook(path)
     ws = wb.worksheets[0]
     rows = list(ws.iter_rows(values_only=True))
     wb.close()
@@ -320,6 +353,22 @@ def prepare_qa_data():
 # ======================================================================================
 # Metrics (deterministic - no AI involved)
 # ======================================================================================
+def _pattern_label(failed, n_failed, n_evaluated, repeat_agents):
+    """Describe how widespread a missed behavior is.
+
+    "Recurring" means three or more employees missed it, or at least two who make up
+    half or more of the employees evaluated on it. An absolute count alone mislabels
+    small teams: two of three employees is not an isolated problem.
+    """
+    if failed == 0:
+        return "no failures"
+    widespread = n_failed >= 3 or (n_failed >= 2 and 2 * n_failed >= n_evaluated)
+    label = f"{'recurring' if widespread else 'isolated'} - {n_failed} of {n_evaluated} agents evaluated"
+    if repeat_agents:
+        label += f"; repeated by {', '.join(repeat_agents)}"
+    return label
+
+
 def analyze_defects(records):
     """Compute defect rate per behavior and per agent.
 
@@ -343,13 +392,17 @@ def analyze_defects(records):
                 "evaluated": 0,
                 "failed": 0,
                 "agents_failed": set(),
+                "agents_evaluated": set(),
+                "fails_by_agent": defaultdict(int),
                 "evidence": [],
             },
         )
         s["evaluated"] += 1
+        s["agents_evaluated"].add(r["agent"])
         if r["result"] == "No":
             s["failed"] += 1
             s["agents_failed"].add(r["agent"])
+            s["fails_by_agent"][r["agent"]] += 1
         if r[
             "comment"
         ].strip():  # evaluators also comment on some PASSING items - keep both
@@ -367,15 +420,15 @@ def analyze_defects(records):
     for s in by_behavior.values():
         s["agents_failed"] = sorted(s["agents_failed"])
         s["n_agents_failed"] = len(s["agents_failed"])
+        s["n_agents_evaluated"] = len(s.pop("agents_evaluated"))
+        # Employees who missed this behavior on more than one evaluation.
+        s["repeat_agents"] = sorted(a for a, n in s.pop("fails_by_agent").items() if n >= 2)
         s["defect_rate_pct"] = (
             round(100 * s["failed"] / s["evaluated"]) if s["evaluated"] else 0
         )
-        if s["failed"] == 0:
-            s["pattern"] = "no failures"
-        elif s["n_agents_failed"] >= 3:
-            s["pattern"] = f"recurring - {s['n_agents_failed']} of {n_agents} agents"
-        else:
-            s["pattern"] = f"isolated - {s['n_agents_failed']} agent(s)"
+        s["pattern"] = _pattern_label(
+            s["failed"], s["n_agents_failed"], s["n_agents_evaluated"], s["repeat_agents"]
+        )
         behaviors.append(s)
     behaviors.sort(key=lambda s: (-s["defect_rate_pct"], -s["failed"], s["behavior"]))
     for i, s in enumerate(behaviors, start=1):
@@ -452,7 +505,7 @@ def load_training_outline():
             f"Missing training workbook: {path.name}\nExpected location: {path}\n"
             f"Fix: copy the ResultsCX Excel files into the folder  {DATA_DIR}"
         )
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    wb = _open_workbook(path)
 
     def clean(v, limit=220):
         if v is None:
@@ -502,7 +555,71 @@ def load_training_outline():
 # ======================================================================================
 # Public entry points
 # ======================================================================================
-def get_all_data(source_override=None):
+def dataset_from_records(
+    records: list[dict[str, Any]],
+    outline: dict[str, Any],
+    *,
+    source_kind: str,
+    checks: list[tuple[str, bool, str]],
+    scrub_log: dict[str, int] | None = None,
+    agent_map: dict[str, str] | None = None,
+    team_lead_map: dict[str, str] | None = None,
+    qa_form: list[dict[str, str]] | None = None,
+    source_label: str = "",
+) -> dict[str, Any]:
+    """Assemble the dataset dict every stage reads, whatever the records came from.
+
+    ``agent_map`` and ``team_lead_map`` hold real names for local masking only and are
+    never included in anything sent to a model.
+    """
+    metrics = analyze_defects(records)
+    return {
+        "records": records,
+        "behaviors": metrics["behaviors"],
+        "agents": metrics["agents"],
+        "totals": metrics["totals"],
+        "outline": outline,
+        "qa_form": qa_form or [],
+        "sections": {
+            code: {"name": v[1], "description": v[2]} for code, v in QA_FILES.items()
+        },
+        "checks": checks,
+        "scrub_log": scrub_log or {},
+        "agent_map": agent_map or {},  # LOCAL ONLY
+        "team_lead_map": team_lead_map or {},  # LOCAL ONLY
+        "source_kind": source_kind,
+        "source_label": source_label or source_kind,
+    }
+
+
+def load_synthetic_fixture() -> dict[str, Any]:
+    """Read the checked-in invented QA records."""
+    try:
+        fixture = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DataError(
+            "The public synthetic QA fixture is unavailable or invalid"
+        ) from exc
+    allowed = set(RECORD_FIELDS) | set(EVIDENCE_FIELDS)
+    checks = [
+        ("Synthetic example records only", True, "No original QA exports loaded"),
+        (
+            "No unexpected identity fields",
+            all(set(r) <= allowed for r in fixture["records"]),
+            "Public fixture field allowlist",
+        ),
+    ]
+    return dataset_from_records(
+        fixture["records"],
+        fixture["outline"],
+        source_kind="synthetic",
+        checks=checks,
+        qa_form=fixture.get("qa_form"),
+        source_label="Built-in synthetic dataset",
+    )
+
+
+def get_all_data(source_override: str | None = None) -> dict[str, Any]:
     """Return synthetic examples by default; private workbooks require opt-in.
 
     Set QA_DATA_SOURCE=private and ALLOW_PRIVATE_QA_READ=1 to read the local
@@ -514,73 +631,32 @@ def get_all_data(source_override=None):
         else os.environ.get("QA_DATA_SOURCE", "synthetic")
     ).strip().lower()
     if source == "synthetic":
-        try:
-            fixture = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise DataError(
-                "The public synthetic QA fixture is unavailable or invalid"
-            ) from exc
-        qa = {
-            "records": fixture["records"],
-            "agent_map": {},
-            "team_lead_map": {},
-            "scrub_log": {},
-            "checks": [
-                (
-                    "Synthetic example records only",
-                    True,
-                    "No original QA exports loaded",
-                ),
-                (
-                    "No unexpected identity fields",
-                    all(
-                        set(r)
-                        <= {
-                            "record_id",
-                            "source",
-                            "section",
-                            "team_lead",
-                            "agent",
-                            "call_date",
-                            "behavior",
-                            "result",
-                            "comment",
-                            "max_score",
-                            "score",
-                        }
-                        for r in fixture["records"]
-                    ),
-                    "Public fixture field allowlist",
-                ),
-            ],
-        }
-        outline = fixture["outline"]
-    elif source == "private":
+        return load_synthetic_fixture()
+    if source == "private":
         if os.environ.get("ALLOW_PRIVATE_QA_READ") != "1":
             raise DataError(
                 "Private workbooks require ALLOW_PRIVATE_QA_READ=1 and permission to use them"
             )
         qa = prepare_qa_data()
-        outline = load_training_outline()
-    else:
-        raise DataError("QA_DATA_SOURCE must be either synthetic or private")
+        return dataset_from_records(
+            qa["records"],
+            load_training_outline(),
+            source_kind="private",
+            checks=qa["checks"],
+            scrub_log=qa["scrub_log"],
+            agent_map=qa["agent_map"],
+            team_lead_map=qa["team_lead_map"],
+            source_label="Authorized local exports",
+        )
+    raise DataError("QA_DATA_SOURCE must be either synthetic or private")
 
-    metrics = analyze_defects(qa["records"])
-    return {
-        "records": qa["records"],
-        "behaviors": metrics["behaviors"],
-        "agents": metrics["agents"],
-        "totals": metrics["totals"],
-        "outline": outline,
-        "sections": {
-            code: {"name": v[1], "description": v[2]} for code, v in QA_FILES.items()
-        },
-        "checks": qa["checks"],
-        "scrub_log": qa["scrub_log"],
-        "agent_map": qa["agent_map"],  # LOCAL ONLY
-        "team_lead_map": qa["team_lead_map"],  # LOCAL ONLY
-        "source_kind": source,
-    }
+
+def private_source_enabled() -> bool:
+    """True when the environment opts in to reading the local private workbooks."""
+    return (
+        os.environ.get("QA_DATA_SOURCE", "").strip().lower() == "private"
+        and os.environ.get("ALLOW_PRIVATE_QA_READ") == "1"
+    )
 
 
 def build_model_payload(data):

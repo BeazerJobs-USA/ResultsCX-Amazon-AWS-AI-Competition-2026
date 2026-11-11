@@ -1,32 +1,47 @@
 """
-pipeline.py — the six-step flow from the case study, as plain Python functions.
+pipeline.py - the model-facing steps of the four-stage workflow, as plain Python.
 
-    1 Data Intake         get_data.get_all_data()               (Python, offline)
-    2 Needs Analysis      run_diagnosis()                       (Bedrock call #1)  -> validate_diagnosis()
-    3 Human Validation    the supervisor edits/approves in app.py (no AI)
-    4 Training Design     run_training()                        (Bedrock call per approved finding)
-    5 Alignment Check     alignment_check()                     (Python, deterministic)
-    6 Outcome Evaluation  not in scope for the prototype (re-run stage 1 on post-training exports)
+    Stage 1  Intake and evidence     get_data / workflow.intake        (Python, offline)
+    Stage 2  Diagnosis and risk      run_diagnosis() -> validate_diagnosis()   (one model call)
+    Stage 3  Supervisor review       workflow.review / workflow.operations     (people, no AI)
+    Stage 4  Coaching and practice   run_training()                    (one model call per package)
 
-Synthetic AI results can be saved under outputs/ for offline replay. Private
-results require explicit opt-in because those JSON files are not encrypted.
+Everything a model returns is validated here before it is shown: numbers are
+replaced with the values computed in Python, cited record IDs and quotes are
+checked against the loaded records, and structurally incomplete output is
+rejected. ``alignment_check()`` is a deterministic keyword check that a package
+targets its finding. Measuring whether coaching changed later QA results is
+outside this prototype.
+
+Results from synthetic data can be saved under outputs/ for offline replay. Any
+other data source needs an explicit opt-in because those JSON files are not
+encrypted.
 """
+
+from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import os
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Callable, Iterable
 
 import get_data
 import prompts
 import security_controls
 from harness_client import HarnessError
 
+log = logging.getLogger("pipeline")
+
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "outputs"
 HISTORY_DIR = OUTPUT_DIR / "history"
+# Timestamped copies kept per artifact name. Older copies are deleted on save so the
+# folder cannot grow without limit.
+HISTORY_LIMIT = 20
 
 ROOT_CAUSE_TYPES = ["Knowledge Gap", "Skill Gap", "Process Gap", "Will Gap"]
 INTERVENTIONS = ["simulation", "eLearning/ILT", "coaching", "escalate to operations"]
@@ -86,26 +101,53 @@ def _pick(value, allowed, default):
     return default
 
 
-def save_json(name, obj, source_kind="synthetic"):
-    if (
-        source_kind == "private"
-        and os.environ.get("ALLOW_PRIVATE_OUTPUT_STORAGE") != "1"
-    ):
+def is_synthetic(source_kind: str | None) -> bool:
+    """Only the checked-in invented fixture is treated as safe to store or send.
+
+    Uploaded files and local exports are both handled as private, whatever they contain.
+    """
+    return (source_kind or "synthetic") == "synthetic"
+
+
+def storage_allowed(source_kind: str | None) -> bool:
+    """Whether derived output for this data source may be written to disk."""
+    return is_synthetic(source_kind) or os.environ.get("ALLOW_PRIVATE_OUTPUT_STORAGE") == "1"
+
+
+def cloud_send_allowed(source_kind: str | None) -> bool:
+    """Whether this data source may be sent to AWS."""
+    return is_synthetic(source_kind) or os.environ.get("ALLOW_PRIVATE_CLOUD_SEND") == "1"
+
+
+def save_json(name, obj, source_kind="synthetic", keep_history=True):
+    """Write ``outputs/latest_<name>.json`` (plus a timestamped copy) if storage is allowed."""
+    if not storage_allowed(source_kind):
         return None
     OUTPUT_DIR.mkdir(exist_ok=True)
-    HISTORY_DIR.mkdir(exist_ok=True)
     latest = OUTPUT_DIR / f"latest_{name}.json"
-    stamped = HISTORY_DIR / f"{datetime.now():%Y%m%d_%H%M%S}_{name}.json"
-    for p in (latest, stamped):
-        p.write_text(json.dumps(obj, indent=2, default=str), encoding="utf-8")
+    text = json.dumps(obj, indent=2, default=str)
+    latest.write_text(text, encoding="utf-8")
+    if keep_history:
+        HISTORY_DIR.mkdir(exist_ok=True)
+        stamped = HISTORY_DIR / f"{datetime.now():%Y%m%d_%H%M%S_%f}_{name}.json"
+        stamped.write_text(text, encoding="utf-8")
+        for stale in sorted(HISTORY_DIR.glob(f"*_{name}.json"))[:-HISTORY_LIMIT]:
+            stale.unlink(missing_ok=True)
     return latest
 
 
 def load_json(name):
+    """Read ``outputs/latest_<name>.json``. A missing or unreadable file returns None."""
     p = OUTPUT_DIR / f"latest_{name}.json"
     if not p.exists():
         return None
-    return json.loads(p.read_text(encoding="utf-8"))
+    try:
+        loaded = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        # A damaged file must not stop the application from starting.
+        log.warning("saved %s could not be read and was ignored", name)
+        return None
+    return loaded if isinstance(loaded, dict) else None
 
 
 def ensure_cloud_upload_authorized(data):
@@ -113,10 +155,7 @@ def ensure_cloud_upload_authorized(data):
     failed = [name for name, passed, _ in data.get("checks", []) if not passed]
     if failed:
         raise PipelineError("Data validation failed: " + ", ".join(failed))
-    if (
-        data.get("source_kind") == "private"
-        and os.environ.get("ALLOW_PRIVATE_CLOUD_SEND") != "1"
-    ):
+    if not cloud_send_allowed(data.get("source_kind")):
         raise PipelineError(
             "Private QA data cannot be sent to AWS by default. Obtain written authorization, "
             "review redaction, and explicitly set ALLOW_PRIVATE_CLOUD_SEND=1."
@@ -155,6 +194,9 @@ def sanitize_model_prompt(prompt, data):
 # ======================================================================================
 # STAGE 2 - Needs analysis
 # ======================================================================================
+_SAFE_FINDING_ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,11}")
+
+
 def validate_diagnosis(diagnosis, data):
     """Make the AI's findings safe to display:
        * attach the software-computed metrics for each finding's behavior (numbers never come from the model)
@@ -169,12 +211,22 @@ def validate_diagnosis(diagnosis, data):
         raise PipelineError(
             "The diagnosis JSON has no 'findings' list.\nType: model output problem. Fix: retry the analysis."
         )
+    seen_ids: set[str] = set()
     for i, f in enumerate(diagnosis["findings"], start=1):
         if not isinstance(f, dict):
             raise PipelineError(
                 f"Diagnosis finding {i} is not a JSON object. Retry the AI analysis."
             )
-        f.setdefault("id", f"F{i}")
+        # Finding ids become widget keys, file names, and audit subjects, so they must be
+        # short, plain, and unique. A model can repeat an id or return something odd.
+        finding_id = str(f.get("id") or "").strip()
+        if not _SAFE_FINDING_ID.fullmatch(finding_id) or finding_id in seen_ids:
+            finding_id, suffix = f"F{i}", 1
+            while finding_id in seen_ids:
+                suffix += 1
+                finding_id = f"F{i}-{suffix}"
+        f["id"] = finding_id
+        seen_ids.add(finding_id)
         b = behaviors.get(str(f.get("behavior_id", "")).strip().upper())
         if b is None:
             # Only use a sufficiently specific title as a fallback; never match empty text.
@@ -228,6 +280,10 @@ def validate_diagnosis(diagnosis, data):
             "confidence_note",
         ):
             f[key] = str(f.get(key) or "")
+        actions = f.get("corrective_actions")
+        f["corrective_actions"] = (
+            [str(a).strip() for a in actions if str(a).strip()][:6] if isinstance(actions, list) else []
+        )
 
         verified = 0
         evidence = f.get("evidence") if isinstance(f.get("evidence"), list) else []
@@ -287,19 +343,43 @@ def validate_diagnosis(diagnosis, data):
     return diagnosis
 
 
-def run_diagnosis(session, data, max_findings=5, on_text=None):
-    """Bedrock call #1. Returns the validated diagnosis dict (also saved to outputs/)."""
+def run_diagnosis(
+    session,
+    data: dict[str, Any],
+    max_findings: int = 5,
+    on_text: Callable[[str], None] | None = None,
+    focus_behavior_ids: Iterable[str] | None = None,
+):
+    """Bedrock call #1. Returns the validated diagnosis dict (also saved to outputs/).
+
+    ``focus_behavior_ids`` limits the analysis to the QA requirements the supervisor
+    selected. Findings the model returns for any other behavior are dropped.
+    """
     ensure_cloud_upload_authorized(data)
     payload = build_safe_model_payload(data)
+    focus = sorted(set(focus_behavior_ids)) if focus_behavior_ids else None
     prompt = sanitize_model_prompt(
-        prompts.build_diagnosis_prompt(payload, max_findings=max_findings), data
+        prompts.build_diagnosis_prompt(
+            payload, max_findings=max_findings, focus_behavior_ids=focus
+        ),
+        data,
     )
     text, turn = session.ask(
         prompt, system_prompt=prompts.SYSTEM_PROMPT, on_text=on_text
     )
     diagnosis = validate_diagnosis(extract_json(text), data)
+    if focus:
+        in_scope = [f for f in diagnosis["findings"] if f.get("behavior_id") in focus]
+        diagnosis["out_of_scope_dropped"] = len(diagnosis["findings"]) - len(in_scope)
+        if not in_scope:
+            raise PipelineError(
+                "The model returned no findings for the selected QA requirements. "
+                "Retry the analysis or widen the scope."
+            )
+        diagnosis["findings"] = in_scope
     diagnosis["_meta"] = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "focus_behavior_ids": focus,
         "session_id": session.session_id,
         "input_tokens": turn.input_tokens,
         "output_tokens": turn.output_tokens,
@@ -390,39 +470,74 @@ def evidence_lines_for(finding, data, max_items=8):
     return "\n".join(lines[:max_items])
 
 
-def ensure_module_complete(module):
-    """Reject structurally incomplete model output before presenting it as usable training."""
+# Components of the original module. ``None`` means "check these".
+CORE_COMPONENTS = (
+    "targeted_coaching",
+    "knowledge_check",
+    "guided_practice",
+    "customer_scenario",
+    "roleplay",
+)
+
+
+def ensure_module_complete(module, components: Iterable[str] | None = None):
+    """Reject structurally incomplete model output before presenting it as usable training.
+
+    Only the components the supervisor asked for are checked. ``None`` checks the
+    original five-part module.
+    """
+    wanted = set(CORE_COMPONENTS if components is None else components) | {"targeted_coaching"}
     missing = []
     for key in ("module_title", "learning_objective", "why_this_fixes_the_gap", "delivery"):
         if not str(module.get(key) or "").strip():
             missing.append(key)
     if not module.get("instruction"):
         missing.append("instruction")
-    quiz = module.get("knowledge_check") or {}
-    options = quiz.get("options")
-    if not (quiz.get("question") and isinstance(options, list) and len(options) >= 2
-            and all(isinstance(option, str) and option.strip() for option in options)
-            and quiz.get("correct") and quiz.get("feedback")):
-        missing.append("knowledge_check")
-    exercise = module.get("hands_on_exercise") or {}
-    if not (exercise.get("trainee_instructions") and exercise.get("facilitator_instructions")
-            and isinstance(exercise.get("success_criteria"), list)
-            and exercise["success_criteria"]):
-        missing.append("hands_on_exercise")
-    scenario = module.get("simulation_scenario") or {}
-    if not (scenario.get("behavioral_target") and scenario.get("scenario_context")
-            and isinstance(scenario.get("scoring_criteria"), list)
-            and scenario["scoring_criteria"]):
-        missing.append("simulation_scenario")
-    roleplay = module.get("roleplay_script") or []
-    if len(roleplay) < 4 or not any(t.get("speaker", "").upper() == "BRANCH" for t in roleplay):
-        missing.append("roleplay_script")
+    if "knowledge_check" in wanted:
+        quiz = module.get("knowledge_check") or {}
+        options = quiz.get("options")
+        if not (quiz.get("question") and isinstance(options, list) and len(options) >= 2
+                and all(isinstance(option, str) and option.strip() for option in options)
+                and quiz.get("correct") and quiz.get("feedback")):
+            missing.append("knowledge_check")
+    if "guided_practice" in wanted:
+        exercise = module.get("hands_on_exercise") or {}
+        if not (exercise.get("trainee_instructions") and exercise.get("facilitator_instructions")
+                and isinstance(exercise.get("success_criteria"), list)
+                and exercise["success_criteria"]):
+            missing.append("hands_on_exercise")
+    if "customer_scenario" in wanted:
+        scenario = module.get("simulation_scenario") or {}
+        if not (scenario.get("behavioral_target") and scenario.get("scenario_context")
+                and isinstance(scenario.get("scoring_criteria"), list)
+                and scenario["scoring_criteria"]):
+            missing.append("simulation_scenario")
+    if "roleplay" in wanted:
+        roleplay = module.get("roleplay_script") or []
+        if len(roleplay) < 4 or not any(t.get("speaker", "").upper() == "BRANCH" for t in roleplay):
+            missing.append("roleplay_script")
+    if "policy_refresher" in wanted:
+        refresher = module.get("policy_refresher") or {}
+        if not (refresher.get("summary") and refresher.get("key_points")):
+            missing.append("policy_refresher")
+    if "coaching_notes" in wanted:
+        if not (module.get("coaching_notes") or {}).get("questions_to_ask"):
+            missing.append("coaching_notes")
+    if "remediation_plan" in wanted:
+        plan = module.get("remediation_plan") or {}
+        if not (plan.get("goal") and plan.get("steps")):
+            missing.append("remediation_plan")
+    if "follow_up_evaluation" in wanted:
+        follow_up = module.get("follow_up_evaluation") or {}
+        if not (follow_up.get("what_to_evaluate") and follow_up.get("success_measure")):
+            missing.append("follow_up_evaluation")
     if missing:
         raise PipelineError("Incomplete training module: " + ", ".join(missing))
     return module
 
 
-RECORD_ID_PATTERN = re.compile(r"\b([A-Z]{2}-\d{3})\b")
+# Three or more digits: record numbering continues past 999 in larger exports.
+RECORD_ID_PATTERN = re.compile(r"\b([A-Z]{2}-\d{3,})\b")
 
 
 def verify_module_citations(module, finding, data):
@@ -509,13 +624,58 @@ def validate_module(module, finding, data=None):
             if sc.get("scoring_criteria")
             else []
         )
+    _normalize_optional_sections(module)
     if data is not None:
         verify_module_citations(module, finding, data)
     return module
 
 
-def run_training(session, approved_findings, data, on_progress=None, on_text=None):
+def _text_list(value: Any, limit: int = 12) -> list[str]:
+    return [str(item).strip() for item in value if str(item).strip()][:limit] if isinstance(value, list) else []
+
+
+def _normalize_optional_sections(module: dict[str, Any]) -> None:
+    """Give the optional package sections a predictable shape, whatever a model returned."""
+    for key in ("additional_knowledge_checks", "roleplay_decisions"):
+        value = module.get(key)
+        module[key] = [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+    for key, list_fields in (
+        ("policy_refresher", ("key_points", "confirm_with_policy_owner")),
+        ("coaching_notes", ("questions_to_ask", "what_good_looks_like", "commitments_to_agree")),
+        ("follow_up_evaluation", ()),
+    ):
+        section = module.get(key) if isinstance(module.get(key), dict) else {}
+        for field in list_fields:
+            section[field] = _text_list(section.get(field))
+        module[key] = {k: (v if isinstance(v, list) else str(v or "")) for k, v in section.items()}
+    plan = module.get("remediation_plan") if isinstance(module.get("remediation_plan"), dict) else {}
+    steps = plan.get("steps") if isinstance(plan.get("steps"), list) else []
+    module["remediation_plan"] = {
+        "goal": str(plan.get("goal") or ""),
+        "steps": [
+            {key: str(step.get(key) or "") for key in ("step", "owner", "timing")}
+            for step in steps
+            if isinstance(step, dict) and str(step.get("step") or "").strip()
+        ][:12],
+        "escalation_trigger": str(plan.get("escalation_trigger") or ""),
+    } if plan else {}
+
+
+def run_training(
+    session,
+    approved_findings: list[dict[str, Any]],
+    data: dict[str, Any],
+    on_progress: Callable[[int, int, dict[str, Any]], None] | None = None,
+    on_text: Callable[[str], None] | None = None,
+    components: dict[str, list[str]] | list[str] | None = None,
+    merge_into: dict[str, Any] | None = None,
+):
     """Bedrock call per approved finding. Returns {"modules": [...], "errors": [...]} and saves it.
+
+    ``components`` is the package content the supervisor selected, either one list for
+    every finding or a mapping of finding id to list. ``None`` requests the original
+    five-part module. ``merge_into`` is an earlier result to add these packages to, so
+    packages can be generated (or retried) one finding at a time.
 
     A failed module is recorded without discarding other completed modules.
     """
@@ -524,11 +684,13 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
     for i, finding in enumerate(approved_findings, start=1):
         if on_progress:
             on_progress(i, len(approved_findings), finding)
+        chosen = components.get(finding["id"]) if isinstance(components, dict) else components
         prompt = sanitize_model_prompt(
             prompts.build_training_prompt(
                 finding,
                 evidence_lines_for(finding, data),
                 related_outline_entries(finding, data["outline"]),
+                components=chosen,
             ),
             data,
         )
@@ -537,7 +699,8 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
                 prompt, system_prompt=prompts.SYSTEM_PROMPT, on_text=on_text
             )
             module = validate_module(extract_json(text), finding, data)
-            ensure_module_complete(module)
+            ensure_module_complete(module, chosen)
+            module["components"] = list(chosen) if chosen is not None else list(CORE_COMPONENTS)
             module["_meta"] = {
                 "input_tokens": turn.input_tokens,
                 "output_tokens": turn.output_tokens,
@@ -565,12 +728,94 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
             "data_fingerprint": data_fingerprint(data),
         },
     }
+    result = merge_training(merge_into, result)
     save_json("training", result, source_kind=data.get("source_kind", "synthetic"))
     return result
 
 
+def merge_training(existing: dict[str, Any] | None, new: dict[str, Any]) -> dict[str, Any]:
+    """Add newly generated packages to an earlier result, replacing same-finding entries."""
+    if not existing:
+        return new
+    regenerated = {m["finding_id"] for m in new["modules"]}
+    attempted = regenerated | {e["finding_id"] for e in new["errors"]}
+    findings = {f["id"]: f for f in existing.get("approved_findings", [])}
+    findings.update({f["id"]: f for f in new.get("approved_findings", [])})
+    # A failed regeneration keeps the earlier package; only a new package replaces it.
+    modules = [m for m in existing.get("modules", []) if m["finding_id"] not in regenerated] + new["modules"]
+    errors = [e for e in existing.get("errors", []) if e["finding_id"] not in attempted] + new["errors"]
+    approved = list(findings.values())
+    return {
+        "modules": modules,
+        "errors": errors,
+        "approved_findings": approved,
+        "alignment": alignment_check(approved, modules),
+        "_meta": new.get("_meta", {}),
+    }
+
+
+def load_saved_run(data: dict[str, Any]) -> dict[str, Any]:
+    """Load a saved diagnosis and its coaching packages for read-only replay.
+
+    The saved files are checked against the loaded dataset and passed through the same
+    validators as fresh model output, so a stale or hand-edited file produces a clear
+    error instead of a broken screen.
+    """
+    fingerprint = data_fingerprint(data)
+    diagnosis = load_json("diagnosis")
+    if not diagnosis:
+        raise PipelineError(
+            "No saved run to replay.\nFix: switch to Live mode and run the diagnosis once; "
+            "every successful run is saved under outputs/ automatically."
+        )
+    if diagnosis.get("_meta", {}).get("data_fingerprint") != fingerprint:
+        raise PipelineError(
+            "The saved diagnosis does not match the loaded QA dataset. "
+            "Use the matching source or start a new analysis."
+        )
+    training = load_json("training")
+    if not training:
+        raise PipelineError(
+            "The saved diagnosis has no completed training package to replay. "
+            "Run the full approved flow in Live mode to create one."
+        )
+    if training.get("_meta", {}).get("data_fingerprint") != fingerprint:
+        raise PipelineError("The saved training was created from a different QA dataset.")
+
+    meta = diagnosis.get("_meta", {})
+    diagnosis = validate_diagnosis(diagnosis, data)
+    diagnosis["_meta"] = meta
+    approved = {
+        f["id"]: f for f in training.get("approved_findings", []) if isinstance(f, dict) and f.get("id")
+    }
+    modules = []
+    for module in training.get("modules", []):
+        finding = approved.get(module.get("finding_id")) if isinstance(module, dict) else None
+        if finding:
+            components = module.get("components")
+            module = validate_module(module, finding, data)
+            module["components"] = components if isinstance(components, list) else list(CORE_COMPONENTS)
+            modules.append(module)
+    training = {
+        "modules": modules,
+        "errors": [e for e in training.get("errors", []) if isinstance(e, dict) and e.get("finding_id")],
+        "approved_findings": list(approved.values()),
+        "alignment": alignment_check(list(approved.values()), modules),
+        "_meta": training.get("_meta", {}),
+    }
+    review_state = load_json("review")
+    if review_state and review_state.get("data_fingerprint") != fingerprint:
+        review_state = None
+    return {
+        "diagnosis": diagnosis,
+        "training": training,
+        "review": review_state,
+        "legacy_approval": load_json("approval"),
+    }
+
+
 # ======================================================================================
-# STAGE 5 - Alignment check (deterministic)
+# Alignment check (deterministic keyword heuristic, not a measure of training quality)
 # ======================================================================================
 def alignment_check(approved_findings, modules):
     """One row per module: does it point at an approved finding, and does its behavioral target
@@ -595,6 +840,7 @@ def alignment_check(approved_findings, modules):
                 "finding_id": fid,
                 "finding_title": f.get("title", "") if f else "(unknown finding)",
                 "module_title": m.get("module_title", ""),
+                "components": m.get("components"),
                 "finding_exists": f is not None,
                 "target_matches_behavior": bool(overlap) if f else False,
                 "shared_terms": sorted(overlap),
@@ -618,6 +864,7 @@ def alignment_check(approved_findings, modules):
                     "finding_id": fid,
                     "finding_title": f.get("title", ""),
                     "module_title": "(no module generated)",
+                    "components": None,
                     "finding_exists": True,
                     "target_matches_behavior": False,
                     "shared_terms": [],

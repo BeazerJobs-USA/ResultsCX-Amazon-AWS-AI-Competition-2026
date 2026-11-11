@@ -13,17 +13,22 @@ I'm George Beazer, a senior cybersecurity student at KSU. This was a six person 
 
 Later code revisions added synthetic sample data, tighter citation checks, private data access guards, and an offline walkthrough. Those changes are separate from the work completed during the two day competition. The privacy controls reflect healthcare confidentiality and HIPAA aware design concerns, but they are not a claim that the prototype is HIPAA compliant.
 
-## Additional public prototype improvements (November 2026)
+## November 2026 rebuild
 
-In a later portfolio revision, I extended the app with three small, understandable features. These are **my later improvements to the publicly documented project**, not features I am claiming were deployed in the September competition:
+After the competition I rebuilt the application's structure, interface and tests **with AI coding assistance (Claude Code)**. This is later work, not something that ran at the September competition, and I'm noting the assistance so nobody reads these changes as hand-written by me alone.
 
-1. **Pre-model data sanitization:** I added `security_controls.py` and wired it through `pipeline.build_safe_model_payload()` and `pipeline.sanitize_model_prompt()`. It checks every nested text field in the model-facing QA summary, and checks complete prompts after supervisor edits, for recognizable personal identifiers. Both the diagnosis path and the optional Bedrock tool response use the filtered data.
-2. **Compliance review alerts:** I added a deterministic rule that picks up failed `CO` evaluations. I later corrected it to include all failed compliance rows, because keyword-only checks could miss genuine failed QA controls. The Supervisor Review UI highlights affected record IDs immediately and prioritizes identity/privacy matches, without making an AI model decide whether an issue deserves attention. This is in-app escalation for review, not a sent incident ticket or legal finding.
-3. **Interactive business impact:** I added `business_impact.py` and the editable calculator on the first Streamlit screen. It compares manual versus AI-assisted preparation **including supervisor review** and shows scenario hours per week, per year, and potential labor-capacity value. Numbers are assumptions until a real pilot measures them.
+What changed:
 
-I commented the code and added synthetic-only unit tests and app-flow checks so these controls can be explained, reviewed, and reproduced without confidential records or paid model access. I have not verified that the new privacy filter catches every kind of protected health information or that the risk alert captures every possible violation.
+1. **Four-stage interface.** `app.py` is now a short entry point. Each workspace has its own module under `ui/`, and the logic behind them is in `workflow/` with no Streamlit import.
+2. **Supervisor decisions.** Approve, reject, edit, request evidence, confirm or dismiss a control, refer a suspected privacy issue. Notes are required for rejections and changes. The AI's original text is kept beside the final decision.
+3. **Compliance flags and an audit trail.** Rule-based Low, Moderate, High and Critical levels, supervisor actions on each flag, and a hash-chained log of what was done.
+4. **Coaching.** The supervisor picks components first. The knowledge check is graded. The roleplay branches on the choice made. Guided practice, a remediation plan, follow-up evaluation and completion tracking were added.
+5. **Simulated HR referral.** Clearly labeled, in memory only, never recommended by the AI.
+6. **Uploads.** CSV or JSON files are validated, pseudonymized and masked, and treated as private.
+7. **Dashboard and calculator.** Counts from the loaded data and recorded actions, and an estimate with validated inputs and visible formulas.
+8. **Tests.** Workflow logic, real Streamlit `AppTest`, and a headless Chrome test. See [Verification](VERIFICATION.md).
 
-In a subsequent reliability review I added tests for live configuration errors, calculator updates, interrupted model streams, malformed JSON values, and repeated tool requests. I also corrected evidence verification to check sanitized quotes and added a configurable AWS read timeout. These are later maintenance improvements; I have not claimed that I operated or stress-tested the team's original live AWS runtime.
+Earlier maintenance changes from the first public version remain: the masking layer at the Bedrock boundary, stricter citation checks (record ID, behavior and quote must match), and configurable AWS timeouts. I haven't claimed that I operated or stress-tested the team's original live AWS runtime, and I haven't tested the rebuilt app against live AWS either.
 
 ## Team credit
 

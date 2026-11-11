@@ -1,77 +1,73 @@
 {
-  "notice": "Invented records for public testing. Not derived from ResultsCX customer or employee data.",
+  "notice": "Invented records for public testing. Not derived from ResultsCX customer or employee data. The qa_form entries are an invented scoring guide, not any organization's policy.",
   "records": [
-    {
-      "record_id": "CO-001", "source": "CO", "section": "Compliance",
-      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
-      "behavior": "Confirm identity before discussing account details", "result": "No",
-      "comment": "The agent discussed a plan update before completing the required verification steps.",
-      "max_score": 1, "score": 0
-    },
-    {
-      "record_id": "CO-002", "source": "CO", "section": "Compliance",
-      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
-      "behavior": "Confirm identity before discussing account details", "result": "Yes",
-      "comment": "The agent completed verification before discussing the account.",
-      "max_score": 1, "score": 1
-    },
-    {
-      "record_id": "CO-003", "source": "CO", "section": "Compliance",
-      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
-      "behavior": "Confirm identity before discussing account details", "result": "No",
-      "comment": "The agent skipped a verification step and needed a supervisor reminder.",
-      "max_score": 1, "score": 0
-    },
-    {
-      "record_id": "BP-001", "source": "BP", "section": "Business Process",
-      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
-      "behavior": "Document the resolution and next steps accurately", "result": "No",
-      "comment": "The resolution was explained verbally but the documentation did not include the next action.",
-      "max_score": 1, "score": 0
-    },
-    {
-      "record_id": "BP-002", "source": "BP", "section": "Business Process",
-      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
-      "behavior": "Document the resolution and next steps accurately", "result": "No",
-      "comment": "The case notes omitted the requested follow-up date and responsible team.",
-      "max_score": 1, "score": 0
-    },
-    {
-      "record_id": "BP-003", "source": "BP", "section": "Business Process",
-      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
-      "behavior": "Document the resolution and next steps accurately", "result": "Yes",
-      "comment": "The agent recorded the decision and follow-up action.",
-      "max_score": 1, "score": 1
-    },
-    {
-      "record_id": "ME-001", "source": "ME", "section": "Member Experience",
-      "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01",
-      "behavior": "Confirm understanding and next steps", "result": "Yes",
-      "comment": "The agent summarized the next action and asked for confirmation.",
-      "max_score": 1, "score": 1
-    },
-    {
-      "record_id": "ME-002", "source": "ME", "section": "Member Experience",
-      "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02",
-      "behavior": "Confirm understanding and next steps", "result": "No",
-      "comment": "The agent ended the conversation without checking whether the next steps were clear.",
-      "max_score": 1, "score": 0
-    },
-    {
-      "record_id": "ME-003", "source": "ME", "section": "Member Experience",
-      "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03",
-      "behavior": "Confirm understanding and next steps", "result": "Yes",
-      "comment": "The agent restated the action and confirmed the customer's understanding.",
-      "max_score": 1, "score": 1
-    }
+    {"record_id": "CO-001", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Confirm identity before discussing account details", "result": "No", "comment": "The agent discussed a plan update before completing the required verification steps.", "max_score": 1, "score": 0},
+    {"record_id": "CO-002", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Confirm identity before discussing account details", "result": "Yes", "comment": "The agent completed verification before discussing the account.", "max_score": 1, "score": 1},
+    {"record_id": "CO-003", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Confirm identity before discussing account details", "result": "No", "comment": "The agent skipped a verification step and needed a supervisor reminder.", "max_score": 1, "score": 0},
+    {"record_id": "CO-004", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Confirm identity before discussing account details", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-005", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Confirm identity before discussing account details", "result": "No", "comment": "The caller opened with a claim question and the agent answered it before asking the verification questions.", "max_score": 1, "score": 0},
+    {"record_id": "CO-006", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Confirm identity before discussing account details", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-007", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Confirm identity before discussing account details", "result": "Yes", "comment": "All verification questions were asked before the account was opened.", "max_score": 1, "score": 1},
+    {"record_id": "CO-008", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Confirm identity before discussing account details", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-009", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-010", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "The disclosure was read at the start of the call.", "max_score": 1, "score": 1},
+    {"record_id": "CO-011", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-012", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Read the required call recording disclosure", "result": "No", "comment": "The recording disclosure was not read. The agent reported that the disclosure prompt did not appear in the call-handling tool.", "max_score": 1, "score": 0},
+    {"record_id": "CO-013", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-014", "source": "CO", "section": "Compliance", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-015", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "CO-016", "source": "CO", "section": "Compliance", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Read the required call recording disclosure", "result": "Yes", "comment": "The agent read the disclosure from memory and noted that the prompt was still missing from the call-handling tool.", "max_score": 1, "score": 1},
+    {"record_id": "BP-001", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Document the resolution and next steps accurately", "result": "No", "comment": "The resolution was explained verbally but the documentation did not include the next action.", "max_score": 1, "score": 0},
+    {"record_id": "BP-002", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Document the resolution and next steps accurately", "result": "No", "comment": "The case notes omitted the requested follow-up date and responsible team.", "max_score": 1, "score": 0},
+    {"record_id": "BP-003", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Document the resolution and next steps accurately", "result": "Yes", "comment": "The agent recorded the decision and follow-up action.", "max_score": 1, "score": 1},
+    {"record_id": "BP-004", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Document the resolution and next steps accurately", "result": "No", "comment": "The notes described the call but did not say who owns the follow-up.", "max_score": 1, "score": 0},
+    {"record_id": "BP-005", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Document the resolution and next steps accurately", "result": "Yes", "comment": "The next action and owner were recorded.", "max_score": 1, "score": 1},
+    {"record_id": "BP-006", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Document the resolution and next steps accurately", "result": "No", "comment": "The follow-up date was promised to the member but was not entered in the case notes.", "max_score": 1, "score": 0},
+    {"record_id": "BP-007", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Document the resolution and next steps accurately", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-008", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Document the resolution and next steps accurately", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-009", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-010", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-011", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-012", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "The issue was escalated to the correct queue.", "max_score": 1, "score": 1},
+    {"record_id": "BP-013", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-014", "source": "BP", "section": "Business Process", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "BP-015", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Follow the escalation procedure for unresolved issues", "result": "No", "comment": "The unresolved billing question was closed without the required escalation.", "max_score": 1, "score": 0},
+    {"record_id": "BP-016", "source": "BP", "section": "Business Process", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Follow the escalation procedure for unresolved issues", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-001", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "The agent summarized the next action and asked for confirmation.", "max_score": 1, "score": 1},
+    {"record_id": "ME-002", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Confirm understanding and next steps", "result": "No", "comment": "The agent ended the conversation without checking whether the next steps were clear.", "max_score": 1, "score": 0},
+    {"record_id": "ME-003", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "The agent restated the action and confirmed the customer's understanding.", "max_score": 1, "score": 1},
+    {"record_id": "ME-004", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-005", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-006", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "The agent asked the member to repeat the next step back.", "max_score": 1, "score": 1},
+    {"record_id": "ME-007", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Confirm understanding and next steps", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-008", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Confirm understanding and next steps", "result": "No", "comment": "The member asked what would happen next and the agent closed the call without answering.", "max_score": 1, "score": 0},
+    {"record_id": "ME-009", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-01", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-010", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-02", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "The agent paraphrased the member's concern before responding.", "max_score": 1, "score": 1},
+    {"record_id": "ME-011", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-03", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-012", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-04", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-013", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-01", "call_date": "2026-09-08", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "The agent let the member finish before answering.", "max_score": 1, "score": 1},
+    {"record_id": "ME-014", "source": "ME", "section": "Member Experience", "team_lead": "TL-01", "agent": "Agent-02", "call_date": "2026-09-09", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-015", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-03", "call_date": "2026-09-10", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1},
+    {"record_id": "ME-016", "source": "ME", "section": "Member Experience", "team_lead": "TL-02", "agent": "Agent-04", "call_date": "2026-09-11", "behavior": "Demonstrate active listening", "result": "Yes", "comment": "", "max_score": 1, "score": 1}
+  ],
+  "qa_form": [
+    {"source": "CO", "behavior": "Confirm identity before discussing account details", "requirement": "Before any account, plan, claim, or benefit detail is acknowledged or shared, the agent completes every step of the caller-verification procedure. Scored No if any account detail is discussed first or a step is skipped."},
+    {"source": "CO", "behavior": "Read the required call recording disclosure", "requirement": "The agent reads the call recording disclosure at the start of the call, before the reason for the call is discussed."},
+    {"source": "BP", "behavior": "Document the resolution and next steps accurately", "requirement": "Case notes state what was resolved, the next action, who owns it, and any date promised to the member."},
+    {"source": "BP", "behavior": "Follow the escalation procedure for unresolved issues", "requirement": "An issue that cannot be resolved on the call is escalated through the documented escalation path before the case is closed."},
+    {"source": "ME", "behavior": "Confirm understanding and next steps", "requirement": "Before ending the call the agent summarizes the next steps and confirms the member understands them."},
+    {"source": "ME", "behavior": "Demonstrate active listening", "requirement": "The agent lets the member finish, reflects the concern back, and responds to what was actually asked."}
   ],
   "outline": {
     "source_file": "synthetic_qa.json",
     "mission_statement": ["Demonstration curriculum for quality assurance coaching."],
     "entries": [
+      {"week": "Week 1", "day": "Day 1", "topic": "Call opening", "detail": "Greeting and the call recording disclosure."},
       {"week": "Week 1", "day": "Day 2", "topic": "Identity verification", "detail": "Confirm required identifiers before discussing account details."},
       {"week": "Week 2", "day": "Day 3", "topic": "Documentation", "detail": "Record the resolution, next step, and follow-up owner."},
-      {"week": "Week 2", "day": "Day 4", "topic": "Communication", "detail": "Summarize the next steps and confirm understanding."}
+      {"week": "Week 2", "day": "Day 4", "topic": "Communication", "detail": "Summarize the next steps and confirm understanding."},
+      {"week": "Week 3", "day": "Day 1", "topic": "Escalations", "detail": "When and how to escalate an unresolved issue."},
+      {"week": "Week 3", "day": "Day 2", "topic": "Active listening", "detail": "Paraphrase the concern before responding."}
     ]
   }
 }

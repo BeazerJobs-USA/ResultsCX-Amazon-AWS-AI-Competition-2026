@@ -1,21 +1,20 @@
-# Product experience and screenshot notes
+# Screenshots
 
-These two images show the broader coaching experience our competition concept was aiming for: turning a QA finding into focused coaching, a knowledge check, guided practice, and realistic roleplay. They are **illustrative mockups**, not captures from the current `app.py` code. The internal `LIVE CAPTURE` text is decorative mockup text and should not be interpreted as a recording of a working session. The working Streamlit implementation uses four stages and renders a scripted roleplay, not a live interactive conversation.
+The images in `docs/screenshots/` numbered `01` to `08` are captures of the running application in headless Chrome at 1400 px wide, using the **offline demonstration** source and synthetic data. The decision shown in the coaching capture was recorded in that session. Nothing in them comes from AWS, ResultsCX, or a live model.
 
-## Roleplay concept
+| File | Shows |
+| --- | --- |
+| `01-dashboard.png` | Stage progress, QA counts, next step |
+| `02-intake-evidence.png` | The QA records table with filters and the evidence panel |
+| `03-diagnosis-risk.png` | Findings with rule-based risk and evidence checks |
+| `04-supervisor-review.png` | A proposal beside the supervisor's decision form |
+| `05-coaching-quiz.png` | A coaching package with the knowledge check open, before submission |
+| `06-compliance-review.png` | The flag queue and the action form |
+| `07-referral-simulation.png` | The simulated referral form |
+| `08-audit-trail.png` | The audit log |
 
-![Illustrative roleplay screen](screenshots/agent-qa-roleplay-demo.webp)
+The captures were made with a Playwright script and Chrome, not by hand, so they show the page as a browser draws it at one window size. I haven't checked other sizes, browsers or phones.
 
-This concept image shows a fictional Case F2 documentation problem, roleplay branches, a knowledge check, guided practice, and an assumed labor-cost scenario. It communicates the proposed business value of reducing manual coaching preparation, but it does not measure actual supervisor time or calculate verified savings. **Separately, the working Streamlit app now includes a real, editable scenario calculator**; the image itself is still a mockup. The image's baseline and labor amounts are synthetic. Its post-training evaluation is pending.
+## Earlier concept images
 
-## Coaching and alignment concept
-
-![Illustrative coaching screen](screenshots/agent-qa-coaching-focus-demo.webp)
-
-This concept image shows a fictional Case F1 verification problem, a learning objective, an alignment table, and a simulated training-time cost. It is an illustration of how a coaching plan and its assumed costs could be presented, not a financial result produced by the current application. The visible desktop date is not evidence of when the 2026 competition occurred.
-
-## What the visuals prove and what they do not
-
-The mockups are useful as product design references, but they are not runtime evidence. A future improvement is a genuine capture of the public Streamlit walkthrough with the exact code revision, capture date, and **SYNTHETIC** label. Neither image proves a live AWS invocation, real supervisory approval, HIPAA compliance, or measured savings. Their three-part concept navigation is not the current four-stage Streamlit interface.
-
-
+`agent-qa-roleplay-demo.webp` and `agent-qa-coaching-focus-demo.webp` are mockups made for the competition pitch. **They are not captures of this application.** Their "LIVE CAPTURE" text is decoration, they show a three-part layout the app no longer has, and the labor figures in them are invented. I'm keeping them only as a record of the original concept.

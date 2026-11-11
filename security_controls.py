@@ -1,11 +1,22 @@
-"""Small, explainable privacy and compliance checks for the QA coaching demo.
+"""Small, explainable privacy checks for the QA coaching demo.
+
+Two boundaries are handled here:
+
+* **Before a model call.** :func:`sanitize_payload` and :func:`sanitize_text`
+  mask recognizable identifier patterns in everything bound for Bedrock.
+* **Before the screen.** :func:`escape_markdown` neutralizes Markdown and HTML
+  in text the application did not write (evaluator comments, uploaded files,
+  model output), so it is displayed as text and cannot embed links or images.
 
 These are *additional* checks after the input parser has masked known fields.
 Pattern matching cannot guarantee that healthcare data is de-identified.
 """
 
-import re
+from __future__ import annotations
 
+import re
+import string
+from typing import Any
 
 # These patterns are intentionally readable so a student can inspect the rules.
 # Put the more specific patterns first (for example, a phone before a generic ID).
@@ -41,20 +52,31 @@ MASK_RULES = [
     ("long number", re.compile(r"(?<!\w)\d{9,}(?!\w)"), "[ID]"),
 ]
 
+# Keys of the application's own date fields. Their values are withheld from the model
+# on purpose, and are counted apart from identifiers found in free text.
+STRUCTURED_DATE_KEYS = frozenset({"date", "call_date", "date_range"})
+
 
 def sanitize_text(value, known_names=()):
     """Return (masked text, number of replacements); never change input in place."""
+    text, counts = _mask(value, known_names)
+    return text, sum(counts.values())
+
+
+def _mask(value, known_names=()) -> tuple[str, dict[str, int]]:
     text = str(value)
-    count = 0
+    counts: dict[str, int] = {}
     # Known staff names come from local mappings; never put the mapping in AI data.
     for name in sorted(set(known_names), key=len, reverse=True):
         if name and len(name.strip()) >= 3:
             text, n = re.subn(r"\b" + re.escape(name.strip()) + r"\b", "[PERSON]", text, flags=re.I)
-            count += n
-    for _label, pattern, token in MASK_RULES:
+            if n:
+                counts["known staff name"] = counts.get("known staff name", 0) + n
+    for label, pattern, token in MASK_RULES:
         text, n = pattern.subn(token, text)
-        count += n
-    return text, count
+        if n:
+            counts[label] = counts.get(label, 0) + n
+    return text, counts
 
 
 def sanitize_payload(value, known_names=()):
@@ -78,30 +100,57 @@ def sanitize_payload(value, known_names=()):
     return value, 0
 
 
-def critical_compliance_alerts(data):
-    """Flag *all* failed compliance items for human review.
+def mask_report(payload: Any, known_names=()) -> dict[str, Any]:
+    """Explain what the pre-model pass would mask in ``payload``, without changing it.
 
-    Identity/privacy keywords increase priority, but other compliance failures
-    must not disappear just because an evaluator used different wording. This
-    is an in-app *flag*, not a legal determination or a sent notification.
+    ``free_text`` counts identifier patterns found in text people wrote, by rule.
+    ``structured_dates`` counts the application's own call-date fields, which are
+    withheld from the model deliberately. Reporting them together would make an
+    invented dataset with no identifiers look as if it had contained some.
     """
-    keywords = ("identit", "verif", "privacy", "disclos", "hipaa", "protected", "confidential")
-    alerts = []
-    seen = set()
-    for record in data.get("records", []):
-        if record.get("source") != "CO" or record.get("result") != "No":
-            continue
-        description = f"{record.get('behavior', '')} {record.get('comment', '')}".lower()
-        record_id = record.get("record_id", "Unknown")
-        if record_id not in seen:
-            sensitive = any(word in description for word in keywords)
-            alerts.append(
-                {
-                    "record_id": record_id,
-                    "agent": record.get("agent", "Unknown"),
-                    "behavior": record.get("behavior", "Compliance behavior"),
-                    "priority": "Urgent identity/privacy review" if sensitive else "Compliance review",
-                }
-            )
-            seen.add(record_id)
-    return alerts
+    free_text: dict[str, int] = {}
+    structured_dates = 0
+
+    def walk(value: Any, parent_key: str = "") -> None:
+        nonlocal structured_dates
+        if isinstance(value, str):
+            _text, counts = _mask(value, known_names)
+            if parent_key in STRUCTURED_DATE_KEYS:
+                structured_dates += counts.pop("date", 0)
+            for label, n in counts.items():
+                free_text[label] = free_text.get(label, 0) + n
+        elif isinstance(value, list):
+            for item in value:
+                walk(item, parent_key)
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                if isinstance(key, str):
+                    walk(key)
+                walk(item, key if isinstance(key, str) else "")
+
+    walk(payload)
+    return {
+        "free_text": free_text,
+        "free_text_total": sum(free_text.values()),
+        "structured_dates": structured_dates,
+    }
+
+
+_MARKDOWN_SPECIALS = re.compile("([" + re.escape(string.punctuation) + "])")
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def escape_markdown(value: Any, keep_newlines: bool = False) -> str:
+    """Make untrusted text safe to place inside a Markdown string.
+
+    Every ASCII punctuation character is backslash-escaped, which CommonMark renders
+    as the literal character. That disables links, images, HTML tags, emphasis,
+    headings, tables, LaTeX, and Streamlit directives such as ``:red[...]``. Line
+    breaks collapse to spaces unless ``keep_newlines`` is set, so a value cannot break
+    out of a table cell or start a new block.
+    """
+    text = _CONTROL_CHARS.sub(" ", str(value if value is not None else ""))
+    if keep_newlines:
+        lines = [_MARKDOWN_SPECIALS.sub(r"\\\1", " ".join(line.split())) for line in text.splitlines()]
+        return "  \n".join(lines)
+    return _MARKDOWN_SPECIALS.sub(r"\\\1", " ".join(text.split()))

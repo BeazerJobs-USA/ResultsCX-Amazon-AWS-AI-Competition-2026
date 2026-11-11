@@ -2,7 +2,14 @@
 
 This module owns cloud calls. Credentials are resolved by Boto3's provider
 chain; no access keys are passed as application parameters.
+
+The application talks to one AgentCore harness through one API operation,
+``bedrock-agentcore:InvokeHarness``. The diagnosis and each coaching package are
+separate prompts sent to that same harness in one runtime session. There are no
+independently deployed agents behind the stages.
 """
+
+from __future__ import annotations
 
 import json
 import logging
@@ -11,9 +18,22 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable
 
-import botocore.exceptions
 from dotenv import load_dotenv
+
+try:
+    from botocore.exceptions import EventStreamError, ReadTimeoutError
+except ImportError:  # The AWS SDK is only needed for live mode.
+
+    class EventStreamError(Exception):  # type: ignore[no-redef]
+        """Stand-in so the offline demonstration runs without the AWS SDK installed."""
+
+        response: dict = {}
+
+    class ReadTimeoutError(Exception):  # type: ignore[no-redef]
+        """Stand-in so the offline demonstration runs without the AWS SDK installed."""
+
 
 # Load .env that sits next to this file (works no matter where the app is launched from).
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -33,12 +53,23 @@ class HarnessError(Exception):
     """Raised for a failed or invalid Bedrock harness request."""
 
 
+# Tool calls the caller must answer. The harness runs "server_tool_use" and
+# "mcp_tool_use" calls itself and streams their results back; answering those from
+# here would inject a bogus tool result into the conversation.
+CLIENT_TOOL_KINDS = frozenset({"", "tool_use"})
+
+
 @dataclass
 class ToolUse:
     tool_use_id: str
     name: str
     input_text: str = ""  # accumulated JSON fragments
     input: dict = field(default_factory=dict)
+    kind: str = ""  # "tool_use", "server_tool_use", "mcp_tool_use", or "" when not reported
+
+    @property
+    def needs_client_result(self) -> bool:
+        return self.kind in CLIENT_TOOL_KINDS
 
 
 @dataclass
@@ -52,14 +83,15 @@ class HarnessTurn:
     output_tokens: int = 0
     latency_ms: int = 0
     unexpected_events: list = field(default_factory=list)
+    hook_denials: list = field(default_factory=list)  # names of harness hooks that denied a step
 
 
-def new_session_id():
+def new_session_id() -> str:
     """A fresh runtimeSessionId. Must be a string (33-100 chars); a UUID string is 36."""
     return str(uuid.uuid4())
 
 
-def get_config():
+def get_config() -> dict[str, Any]:
     """Read and validate configuration. Never prints secret values."""
     arn = os.environ.get("HARNESS_ARN", "").strip()
     if not arn:
@@ -90,7 +122,20 @@ def get_config():
         "max_tokens": int(max_tokens) if max_tokens.isdigit() else None,
         "model_id": os.environ.get("BEDROCK_MODEL_ID", "").strip() or None,
         "read_timeout": int(timeout),
+        # Optional service-side ceilings for one invocation. Unlike the socket read
+        # timeout above, these bound the whole agent loop on the AWS side.
+        "timeout_seconds": _optional_positive_int("HARNESS_TIMEOUT_SECONDS"),
+        "max_iterations": _optional_positive_int("HARNESS_MAX_ITERATIONS"),
     }
+
+
+def _optional_positive_int(name: str) -> int | None:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    if not raw.isdecimal() or int(raw) <= 0:
+        raise HarnessError(f"{name} must be a positive integer when it is set")
+    return int(raw)
 
 
 def make_client(region, read_timeout=DEFAULT_READ_TIMEOUT):
@@ -114,7 +159,7 @@ def make_client(region, read_timeout=DEFAULT_READ_TIMEOUT):
 # ======================================================================================
 # Stream parsing
 # ======================================================================================
-def parse_stream(stream, on_text=None):
+def parse_stream(stream: Any, on_text: Callable[[str], None] | None = None) -> HarnessTurn:
     """Consume an InvokeHarness event stream and return a HarnessTurn.
 
     ``on_text(chunk)`` is called for every text fragment so a UI can show live progress.
@@ -126,13 +171,13 @@ def parse_stream(stream, on_text=None):
 
     try:
         return _parse_stream_events(stream, turn, open_tools, on_text)
-    except botocore.exceptions.EventStreamError as e:
+    except EventStreamError as e:
         # Some error conditions (e.g. the harness's own max-token limit) are raised by botocore's
         # eventstream decoder itself, before our code ever sees a plain event dict - so the
         # (validationException / internalServerException / runtimeClientError) handling below never
         # runs for these. Catch them here and translate the same way instead of crashing with a
         # raw traceback.
-        error = e.response.get("Error", {})
+        error = (getattr(e, "response", None) or {}).get("Error", {})
         code, msg = error.get("Code", "Unknown"), error.get("Message", "Unknown")
         hint = "Fix: retry once; if it persists, check the harness in the AWS console."
         if (
@@ -151,7 +196,7 @@ def parse_stream(stream, on_text=None):
             "What failed: harness_client.parse_stream (the AWS event stream itself raised an error)\n"
             f"{hint}"
         ) from e
-    except botocore.exceptions.ReadTimeoutError as e:
+    except ReadTimeoutError as e:
         raise HarnessError(
             "Bedrock stopped sending stream data before the read timeout. "
             "The request did not finish. Retry once or increase "
@@ -203,9 +248,12 @@ def _parse_stream_events(stream, turn, open_tools, on_text):
             if "toolUse" in start:
                 tu = start["toolUse"] or {}
                 open_tools[idx] = ToolUse(
-                    tool_use_id=tu.get("toolUseId", ""), name=tu.get("name", "")
+                    tool_use_id=tu.get("toolUseId", ""),
+                    name=tu.get("name", ""),
+                    kind=str(tu.get("type") or ""),
                 )
                 log.info("model requested tool: %s", open_tools[idx].name)
+            # A "toolResult" start is the harness reporting a tool it ran itself.
             continue
 
         if "contentBlockDelta" in event:
@@ -226,6 +274,8 @@ def _parse_stream_events(stream, turn, open_tools, on_text):
                 open_tools[idx].input_text += fragment or ""
             elif "reasoningContent" in delta:
                 pass  # model thinking - not needed in output
+            elif "toolResult" in delta or "toolResultMetadata" in delta:
+                pass  # output of a tool the harness ran itself - not part of the answer
             else:
                 turn.unexpected_events.append(
                     f"unrecognized contentBlockDelta keys: {list(delta)}"
@@ -252,6 +302,12 @@ def _parse_stream_events(stream, turn, open_tools, on_text):
             turn.stop_reason = (event["messageStop"] or {}).get("stopReason", "")
             continue
 
+        if "hookEvent" in event:
+            hook = event["hookEvent"] or {}
+            if hook.get("decision") == "deny":
+                turn.hook_denials.append(str(hook.get("name") or hook.get("type") or "hook"))
+            continue
+
         if "metadata" in event:
             usage = (event["metadata"] or {}).get("usage") or {}
             turn.input_tokens += int(usage.get("inputTokens") or 0)
@@ -275,6 +331,85 @@ def _parse_stream_events(stream, turn, open_tools, on_text):
     if turn.unexpected_events:
         log.warning("%d unexpected stream events", len(turn.unexpected_events))
     return turn
+
+
+# ======================================================================================
+# Failure translation
+# ======================================================================================
+# Stop reasons that mean the reply is not a complete answer, so it must not be parsed
+# as a diagnosis or a coaching module.
+INCOMPLETE_STOP_REASONS = frozenset(
+    {
+        "content_filtered",
+        "malformed_model_output",
+        "malformed_tool_use",
+        "model_context_window_exceeded",
+        "timeout_exceeded",
+        "max_iterations_exceeded",
+        "interrupted",
+        "partial_turn",
+        "hook_stopped",
+    }
+)
+
+# (fragments matched against the exception class name and the AWS error code, advice)
+_FAILURE_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("NoCredentials", "PartialCredentials"),
+        "configure an approved AWS profile, IAM Identity Center, or short-lived role credentials.",
+    ),
+    (
+        ("ExpiredToken", "RequestExpired", "TokenRetrieval", "SSOToken", "UnauthorizedSSO", "TokenRefresh"),
+        "the AWS session has expired. Sign in again (for example `aws sso login`) and retry.",
+    ),
+    (
+        ("UnrecognizedClient", "InvalidSignature", "InvalidClientTokenId", "SignatureDoesNotMatch"),
+        "the credentials were not accepted. Check which profile is active and that it is valid for this account.",
+    ),
+    (
+        ("AccessDenied",),
+        "check the active identity and its bedrock-agentcore:InvokeHarness permission.",
+    ),
+    (
+        ("ResourceNotFound",),
+        "HARNESS_ARN points to a harness that does not exist in this region/account.",
+    ),
+    (
+        ("Throttling", "TooManyRequests", "ServiceQuotaExceeded"),
+        "AWS is limiting requests. Wait a minute and retry; check the AgentCore quotas if it repeats.",
+    ),
+    (
+        ("ParamValidation", "ValidationException"),
+        "a request field was rejected. This is a code or configuration problem, so retrying will not help; "
+        "check harness_client.py against the InvokeHarness request shape.",
+    ),
+    (
+        ("EndpointConnectionError", "ConnectTimeout", "ProxyConnection", "ConnectionClosed"),
+        "no network path to AWS - check Wi-Fi/VPN, or use the offline demonstration.",
+    ),
+)
+_DEFAULT_HINT = "retry once; if it persists, check the harness in the AWS console."
+
+
+def describe_failure(exc: BaseException) -> tuple[str, str]:
+    """Return (identifier, advice) for a failed AWS call.
+
+    botocore reports many service errors as a generic ``ClientError`` whose real cause
+    is the error *code* in the response, so both the class name and the code are
+    checked. Only the code is shown to the user: AWS error messages can contain
+    account IDs and ARNs.
+    """
+    name = type(exc).__name__
+    response = getattr(exc, "response", None)
+    code = ""
+    if isinstance(response, dict):
+        code = str((response.get("Error") or {}).get("Code") or "")
+    label = f"{name} ({code})" if code and code != name else name
+    haystack = f"{name} {code}"
+    for fragments, hint in _FAILURE_HINTS:
+        if any(fragment in haystack for fragment in fragments):
+            return label, hint
+    return label, _DEFAULT_HINT
 
 
 # ======================================================================================
@@ -317,32 +452,17 @@ class HarnessSession:
                     "temperature": 0.0,
                 }
             }
+        if self.config.get("timeout_seconds"):
+            kwargs["timeoutSeconds"] = self.config["timeout_seconds"]
+        if self.config.get("max_iterations"):
+            kwargs["maxIterations"] = self.config["max_iterations"]
         try:
             response = self.client.invoke_harness(**kwargs)
-        except (
-            Exception
-        ) as e:  # botocore raises many classes; translate the common ones
-            name = type(e).__name__
-            hint = (
-                "Fix: retry once; if it persists, check the harness in the AWS console."
-            )
-            if "NoCredentials" in name or "PartialCredentials" in name:
-                hint = "Fix: configure an approved AWS profile, IAM Identity Center, or short-lived role credentials."
-            elif "ParamValidation" in name:
-                hint = "Fix: a request field has the wrong type/shape - see message above (code problem in harness_client.py)."
-            elif (
-                "AccessDenied" in name
-                or "UnrecognizedClient" in name
-                or "InvalidSignature" in name
-            ):
-                hint = "Fix: check the active identity and its bedrock-agentcore:InvokeHarness permission."
-            elif "ResourceNotFound" in name:
-                hint = "Fix: HARNESS_ARN points to a harness that does not exist in this region/account."
-            elif "EndpointConnectionError" in name or "ConnectTimeout" in name:
-                hint = "Fix: no network path to AWS - check Wi-Fi/VPN, then use the offline replay mode for the demo."
+        except Exception as e:  # botocore raises many classes; translate the common ones
+            label, hint = describe_failure(e)
             raise HarnessError(
-                f"invoke_harness failed with {name}.\n"
-                f"What failed: harness_client.HarnessSession._invoke\n{hint}"
+                f"invoke_harness failed with {label}.\n"
+                f"What failed: harness_client.HarnessSession._invoke\nFix: {hint}"
             ) from e
         self.calls += 1
         if not isinstance(response, dict) or "stream" not in response:
@@ -354,7 +474,12 @@ class HarnessSession:
         self.total_output_tokens += turn.output_tokens
         return turn
 
-    def ask(self, user_text, system_prompt=None, on_text=None):
+    def ask(
+        self,
+        user_text: str,
+        system_prompt: str | None = None,
+        on_text: Callable[[str], None] | None = None,
+    ) -> tuple[str, HarnessTurn]:
         """Send one user message and return the model's final text (after any tool rounds)."""
         messages = [{"role": "user", "content": [{"text": user_text}]}]
         final_text = ""
@@ -362,7 +487,8 @@ class HarnessSession:
         for round_no in range(self.max_tool_rounds + 1):
             turn = self._invoke(messages, system_prompt, on_text)
             last_turn = turn
-            if not turn.tool_uses:
+            client_tool_uses = [tu for tu in turn.tool_uses if tu.needs_client_result]
+            if not client_tool_uses:
                 # Earlier tool rounds can include commentary or partial JSON.
                 # Only the final model reply should be parsed as a diagnosis/module.
                 final_text = turn.text
@@ -376,7 +502,7 @@ class HarnessSession:
             assistant_blocks, result_blocks = [], []
             if turn.text.strip():
                 assistant_blocks.append({"text": turn.text})
-            for tu in turn.tool_uses:
+            for tu in client_tool_uses:
                 assistant_blocks.append(
                     {
                         "toolUse": {
@@ -437,16 +563,14 @@ class HarnessSession:
                 f"The model stopped early (stopReason={stop}) so its answer is cut off.\n"
                 "Fix: add  HARNESS_MAX_TOKENS=8000  to .env (or raise it), then retry."
             )
-        if stop in (
-            "content_filtered",
-            "malformed_model_output",
-            "malformed_tool_use",
-            "model_context_window_exceeded",
-            "timeout_exceeded",
-            "max_iterations_exceeded",
-        ):
+        if stop in INCOMPLETE_STOP_REASONS:
+            denied = (
+                f" A harness hook denied a step: {', '.join(last_turn.hook_denials)}."
+                if last_turn and last_turn.hook_denials
+                else ""
+            )
             raise HarnessError(
-                f"The model did not finish normally (stopReason={stop}).\n"
+                f"The model did not finish normally (stopReason={stop}).{denied}\n"
                 "Fix: retry once. If it repeats, shorten the input (fewer evidence comments) or check the harness settings."
             )
         if not final_text.strip():

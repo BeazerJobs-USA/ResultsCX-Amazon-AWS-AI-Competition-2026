@@ -1,237 +1,132 @@
-"""Handwritten synthetic walkthrough for running the public UI without AWS.
+"""Handwritten offline demonstration, for running the application without AWS.
 
-This is not a captured Bedrock response or an outcome from ResultsCX data.
+The findings and coaching packages returned here were written by hand for the
+built-in synthetic dataset and are stored in
+``sample_data/offline_demo_content.json``. They are not captured Bedrock
+responses and say nothing about ResultsCX data. They pass through the same
+validators as model output, so the offline demonstration exercises the same
+checks a live run does.
 """
+
+from __future__ import annotations
+
+import copy
+import json
+from pathlib import Path
+from typing import Any, Iterable
 
 import pipeline
 
+CONTENT_FILE = Path(__file__).resolve().parent / "sample_data" / "offline_demo_content.json"
+SOURCE_LABEL = "handwritten synthetic walkthrough"
+GENERATED_LABEL = "Offline demonstration content (not a model run)"
 
-def demo_diagnosis(data):
-    """Create two sample findings based on the checked-in fictional records."""
-    by_section = {b["source"]: b for b in data["behaviors"]}
-    specs = [
-        (
-            "CO",
-            "F1",
-            "Verification before account discussion",
-            "Skill Gap",
-            "Some sample calls skipped an identity-verification step.",
-            "The verification behavior may be difficult to execute consistently under call pressure. A supervisor should confirm the actual cause.",
-        ),
-        (
-            "BP",
-            "F2",
-            "Documentation of next steps",
-            "Skill Gap",
-            "Two sample evaluations noted incomplete follow-up documentation.",
-            "The agent may need practice recording the owner and next action consistently.",
-        ),
-    ]
-    findings = []
-    for source, fid, title, cause_type, observed, inference in specs:
-        behavior = by_section[source]
-        failures = [item for item in behavior["evidence"] if item["result"] == "No"]
-        findings.append(
-            {
-                "id": fid,
-                "behavior_id": behavior["id"],
-                "title": title,
-                "observed": observed,
-                "root_cause_type": cause_type,
-                "root_cause": inference,
-                "evidence": [
-                    {"record_id": item["record_id"], "quote": item["comment"]}
-                    for item in failures
-                ],
-                "training_recommended": True,
-                "recommended_intervention": "simulation",
-                "curriculum_coverage": "Partial",
-                "curriculum_note": "A related topic exists in the fictional training outline.",
-                "confidence": "low",
-                "confidence_note": "A three-call sample is not enough to establish a real workplace pattern.",
-            }
+
+def _content() -> dict[str, Any]:
+    try:
+        return json.loads(CONTENT_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise pipeline.PipelineError(
+            "The offline demonstration content is missing or invalid."
+        ) from exc
+
+
+def _cases_for(data: dict[str, Any]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """Pair each handwritten case with the matching computed behavior in ``data``."""
+    behaviors = {(b["source"], b["behavior"]): b for b in data["behaviors"]}
+    pairs = []
+    for case in _content()["cases"]:
+        behavior = behaviors.get((case["source"], case["behavior"]))
+        if behavior is not None and behavior["failed"] > 0:
+            pairs.append((case, behavior))
+    return pairs
+
+
+def supports(data: dict[str, Any]) -> bool:
+    """The demonstration only has content for the built-in synthetic dataset."""
+    return data.get("source_kind") == "synthetic" and bool(_cases_for(data))
+
+
+def demo_diagnosis(
+    data: dict[str, Any], focus_behavior_ids: Iterable[str] | None = None
+) -> dict[str, Any]:
+    """Return the handwritten findings for the requirements in scope."""
+    if not supports(data):
+        raise pipeline.PipelineError(
+            "The offline demonstration only has handwritten content for the built-in "
+            "synthetic dataset. Analyzing other data needs Live mode with an authorized harness."
         )
-
+    focus = set(focus_behavior_ids) if focus_behavior_ids else None
+    comments = {r["record_id"]: r["comment"] for r in data["records"]}
+    findings, not_training = [], []
+    for case, behavior in _cases_for(data):
+        if focus is not None and behavior["id"] not in focus:
+            continue
+        finding = {k: v for k, v in case["finding"].items() if k != "evidence_record_ids"}
+        finding["behavior_id"] = behavior["id"]
+        # Quote each cited record's own comment, so the citation check has real text to match.
+        finding["evidence"] = [
+            {"record_id": record_id, "quote": comments.get(record_id, "")}
+            for record_id in case["finding"]["evidence_record_ids"]
+        ]
+        findings.append(finding)
+        if case.get("not_a_training_problem"):
+            not_training.append(case["not_a_training_problem"])
+    if not findings:
+        raise pipeline.PipelineError(
+            "None of the selected QA requirements has demonstration content. Widen the scope."
+        )
+    content = _content()
     diagnosis = pipeline.validate_diagnosis(
         {
-            "summary": "This fictional walkthrough highlights verification and documentation. "
-            "It uses nine invented QA line items; the findings and explanations are not generated by AWS.",
+            "summary": content["summary"],
             "findings": findings,
-            "not_a_training_problem": [],
-            "open_questions": [
-                "Is the verification policy clear in the current workflow?"
-            ],
+            "not_a_training_problem": not_training,
+            "open_questions": content["open_questions"],
         },
         data,
     )
     diagnosis["_meta"] = {
-        "generated_at": "Sample fixture (not a live model run)",
-        "source": "handwritten synthetic walkthrough",
+        "generated_at": GENERATED_LABEL,
+        "source": SOURCE_LABEL,
+        "focus_behavior_ids": sorted(focus) if focus else None,
+        "data_fingerprint": pipeline.data_fingerprint(data),
     }
     return diagnosis
 
 
-def demo_training(approved_findings, data):
-    """Build visibly fictional practice modules for selected sample findings."""
-    modules = []
+def demo_training(
+    approved_findings: list[dict[str, Any]],
+    data: dict[str, Any],
+    components: dict[str, list[str]] | list[str] | None = None,
+    merge_into: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the handwritten coaching package for each approved finding."""
+    modules_by_key = {(c["source"], c["behavior"]): c["module"] for c in _content()["cases"]}
+    modules, errors = [], []
     for finding in approved_findings:
-        behavior = finding["behavior"]
-        module = {
-            "module_title": f"Practice: {behavior}",
-            "learning_objective": f"Demonstrate how to {behavior.lower()} in a practice conversation.",
-            "why_this_fixes_the_gap": "The exercise focuses on the behavior selected for coaching.",
-            "delivery": "coaching",
-            "duration_minutes": 20,
-            "instruction": [
-                "Review the approved steps with a coach.",
-                "Practice the response using a fictional account.",
-                "Explain the next action and confirm understanding.",
-            ],
-            "existing_material_to_reuse": ["Fictional training outline"],
-            "knowledge_check": {
-                "question": "Which action should happen before sharing protected account details?",
-                "options": [
-                    "A) Complete the approved verification steps",
-                    "B) Assume the caller is authorized",
-                    "C) Skip the verification",
-                ],
-                "correct": "A",
-                "feedback": "Use the current approved verification process; the sample does not define company policy.",
-            },
-            "hands_on_exercise": {
-                "title": "Document the coached response",
-                "trainee_instructions": "Work through a fictional customer request with a coach.",
-                "facilitator_instructions": "Check each action against the approved local policy.",
-                "success_criteria": [
-                    "Follows the approved process",
-                    "Documents the next action",
-                ],
-            },
-            "simulation_scenario": {
-                "scenario_id": "SAMPLE-1",
-                "call_driver": "Fictional plan update inquiry",
-                "member_persona": "Fictional customer",
-                "member_emotion": "Concerned",
-                "scenario_context": "The customer wants to know whether a prior request was recorded.",
-                "behavioral_target": behavior,
-                "expected_agent_response": "Verify identity, follow approved steps, and record next actions.",
-                "scoring_criteria": [
-                    "Uses the approved verification path",
-                    "Explains and records follow-up",
-                ],
-            },
-            "roleplay_script": [
-                {
-                    "speaker": "MEMBER",
-                    "line": "Can you check whether my request was saved?",
-                },
-                {
-                    "speaker": "AGENT",
-                    "line": "I'll follow our verification process first.",
-                    "coach_note": "Check the approved verification steps.",
-                },
-                {"speaker": "MEMBER", "line": "Okay, what happens afterward?"},
-                {
-                    "speaker": "AGENT",
-                    "line": "I'll explain and document the next step.",
-                    "coach_note": "Check that the action is recorded.",
-                },
-                {
-                    "speaker": "BRANCH",
-                    "if_agent_demonstrates_behavior": "Proceed with the approved process.",
-                    "if_agent_does_not": "Pause and ask the coach for guidance.",
-                },
-            ],
-        }
-        if finding.get("source") == "BP":
-            # Different evidence must lead to different practice. The documentation case
-            # should never inherit the identity-verification quiz from the compliance case.
-            module.update(
-                {
-                    "module_title": "Practice: Document the resolution and next steps",
-                    "learning_objective": (
-                        "Document the resolution, responsible owner, and next action in a "
-                        "fictional service record before closing the interaction."
-                    ),
-                    "why_this_fixes_the_gap": (
-                        "The fictional QA comments identify incomplete follow-up notes. "
-                        "This practice requires a complete, reviewable handoff."
-                    ),
-                    "instruction": [
-                        "Summarize the customer's stated issue and the resolution given.",
-                        "Record the next action and who is responsible for it.",
-                        "Confirm the customer's understanding and document any outstanding follow-up.",
-                    ],
-                    "knowledge_check": {
-                        "question": "Which documentation best captures the resolution and next steps?",
-                        "options": [
-                            "A) Customer contacted support; issue discussed",
-                            "B) Resolution explained, follow-up owner recorded, and next action noted",
-                            "C) No notes needed once the customer agrees",
-                        ],
-                        "correct": "B",
-                        "feedback": (
-                            "A useful record states what was resolved, who owns the follow-up, "
-                            "and what happens next; use the organization's approved documentation standard."
-                        ),
-                    },
-                    "hands_on_exercise": {
-                        "title": "Complete a fictional follow-up record",
-                        "trainee_instructions": (
-                            "Read the sample interaction and write a note with the resolution, "
-                            "owner, and next action."
-                        ),
-                        "facilitator_instructions": (
-                            "Compare each note element with the scenario and ask the trainee "
-                            "to explain any missing follow-up details."
-                        ),
-                        "success_criteria": [
-                            "Resolution is accurate and complete",
-                            "Follow-up owner is identified",
-                            "Next action is explicit and can be reviewed",
-                        ],
-                    },
-                    "simulation_scenario": {
-                        "scenario_id": "SAMPLE-DOC-1",
-                        "call_driver": "Fictional benefits inquiry requiring a documented follow-up",
-                        "member_persona": "Fictional customer waiting for a response",
-                        "member_emotion": "Concerned about repeated calls",
-                        "scenario_context": (
-                            "An agent explains an account update but must capture which team "
-                            "will confirm the outstanding item and the next contact step."
-                        ),
-                        "behavioral_target": "Document the resolution and next steps accurately",
-                        "expected_agent_response": (
-                            "Summarize the resolution, name the follow-up owner, and clearly "
-                            "document the next action without promising an unsupported deadline."
-                        ),
-                        "scoring_criteria": [
-                            "Documents the resolution accurately",
-                            "Records who owns the outstanding action",
-                            "Records a clear next step and confirms customer understanding",
-                        ],
-                    },
-                    "roleplay_script": [
-                        {"speaker": "MEMBER", "line": "Will someone follow up about the update?"},
-                        {"speaker": "AGENT", "line": "I'll summarize what we resolved and check the next step.", "coach_note": "Identify the resolution precisely."},
-                        {"speaker": "MEMBER", "line": "Who is responsible for contacting me?"},
-                        {"speaker": "AGENT", "line": "I'll record the responsible team and the outstanding task in the service note.", "coach_note": "Name the owner in the fictional record."},
-                        {"speaker": "MEMBER", "line": "I don't want to repeat everything when I call again."},
-                        {"speaker": "AGENT", "line": "I'll document the resolution and next action so the follow-up is clear.", "coach_note": "Check that the record is complete."},
-                        {"speaker": "BRANCH", "if_agent_demonstrates_behavior": "The member confirms the documented next step.", "if_agent_does_not": "The member asks who will take ownership and what happens next."},
-                    ],
-                }
-            )
-        modules.append(pipeline.validate_module(module, finding, data))
-
-    return {
+        chosen = components.get(finding["id"]) if isinstance(components, dict) else components
+        template = modules_by_key.get((finding.get("source"), finding.get("behavior")))
+        try:
+            if template is None:
+                raise pipeline.PipelineError(
+                    "The offline demonstration has no handwritten package for this requirement."
+                )
+            module = pipeline.validate_module(copy.deepcopy(template), finding, data)
+            pipeline.ensure_module_complete(module, chosen)
+            module["components"] = list(chosen) if chosen is not None else list(pipeline.CORE_COMPONENTS)
+            modules.append(module)
+        except pipeline.PipelineError as exc:
+            errors.append({"finding_id": finding["id"], "title": finding.get("title", ""), "error": str(exc)})
+    result = {
         "modules": modules,
-        "errors": [],
+        "errors": errors,
         "approved_findings": approved_findings,
         "alignment": pipeline.alignment_check(approved_findings, modules),
         "_meta": {
-            "generated_at": "Sample fixture (not a live model run)",
-            "source": "handwritten synthetic walkthrough",
+            "generated_at": GENERATED_LABEL,
+            "source": SOURCE_LABEL,
+            "data_fingerprint": pipeline.data_fingerprint(data),
         },
     }
-
+    return pipeline.merge_training(merge_into, result)

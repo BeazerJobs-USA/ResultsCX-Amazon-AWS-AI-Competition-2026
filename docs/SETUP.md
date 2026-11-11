@@ -1,61 +1,64 @@
 # Setup and usage
 
-I built this project on Windows 11 with VS Code and Python. I verified the public build with Python 3.12 and `requirements.lock`. The public mode can run without an AWS account.
+The offline demonstration needs no AWS account. I tested the app on Python 3.13 with the pinned versions in `requirements.lock` (Streamlit 1.67, boto3 1.43). CI uses Python 3.12.
 
-## Windows 11 with uv
+## Install and run
 
-```powershell
+```bash
 git clone https://github.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026.git
 cd ResultsCX-Amazon-AWS-AI-Competition-2026
-
-uv venv --python 3.12
-.\.venv\Scripts\Activate.ps1
-uv pip install -r requirements.lock
+python -m venv .venv
+source .venv/bin/activate            # Windows PowerShell: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.lock
 
 python -m unittest discover -s tests -v
-python -m streamlit run app.py
+streamlit run app.py
 ```
 
-The default **Synthetic walkthrough** always uses `sample_data/synthetic_qa.json`, regardless of any local private-data setting. Click **Load synthetic walkthrough**, inspect the findings, then approve or edit the fictional review form to see the sample coaching modules. The verification and documentation cases have different quizzes and practice scenarios. This is not a live generative-AI result.
+The default source is **Offline demonstration**. In **1 · Intake & Evidence**, use "Load the offline demonstration analysis" to open the handwritten findings, then work through the stages. The browser test needs Playwright and Chrome (`pip install playwright`); it skips itself if either is missing.
 
 ## Terminal checks
 
-```powershell
-python get_data.py
-python main.py --dry-run
-python main.py
+```bash
+python get_data.py          # print dataset totals
+python main.py --dry-run    # build the prompt, no AWS call
+python main.py --check      # check .env, credentials and data (no model tokens used)
 ```
 
-These default to the synthetic dataset, and none of them call Bedrock. The source prints metric counts and prompt length, not raw private prompt content.
+`python main.py --live` calls Bedrock and is only for an authorized harness.
 
-## Optional live AWS mode
+## Live mode
 
-I only use this with a harness and account the team is authorized to access:
+Only with a harness and account you are allowed to use:
 
-1. Copy `.env.example` to `.env` and replace the harness placeholder and profile name with approved local settings.
-2. Configure an AWS profile, IAM Identity Center, or an assumed role. Do not put access keys in Git.
-3. Keep `QA_DATA_SOURCE=synthetic` when evaluating the public example.
-4. In the UI choose **Live — call Bedrock**, or deliberately run `python main.py --live`.
+1. Copy `.env.example` to `.env` and set `HARNESS_ARN` and the AWS region.
+2. Sign in with a profile, IAM Identity Center, or an assumed role. Keep keys out of Git.
+3. Use a current boto3 (`pip install -U boto3`). The client needs the `bedrock-agentcore` service.
+4. In the app, choose **Live - Amazon Bedrock AgentCore** in the sidebar, then run the analysis from Intake.
 
-`HARNESS_ARN` is a **harness ARN**. The client calls `invoke_harness`, not `invoke_agent_runtime`. The current SDK contract expects `harnessArn`, a string `runtimeSessionId` and `messages`. AWS permission and region checks depend on the actual deployment.
+`HARNESS_ARN` is a harness ARN: the client calls `invoke_harness`, not `invoke_agent_runtime`. Optional settings:
 
-`HARNESS_READ_TIMEOUT` is optional and defaults to 120 seconds. It sets how long a single AWS stream read may be idle before the SDK raises an error. It does **not** impose a hard end-to-end deadline on multiple training modules. No live AWS availability is implied by the offline tests.
+| Variable | Meaning |
+| --- | --- |
+| `HARNESS_MAX_TOKENS` | Token ceiling per call; unset uses the harness default. |
+| `HARNESS_READ_TIMEOUT` | Seconds a single stream read may sit idle (15 to 600, default 120). |
+| `HARNESS_TIMEOUT_SECONDS` | Service-side ceiling on one invocation. |
+| `HARNESS_MAX_ITERATIONS` | Service-side ceiling on agent loop rounds. |
+
+If AWS is missing, misconfigured or fails, the app shows what failed and how to fix it, and loads no findings.
 
 ## If something breaks
 
 | Symptom | First check |
 | --- | --- |
-| Missing module | Confirm VS Code and PowerShell use `.venv`; rerun `uv pip install -r requirements.lock`. |
-| Missing synthetic data | Confirm `sample_data/synthetic_qa.json` exists and `QA_DATA_SOURCE=synthetic`. |
-| Harness ARN rejected | Replace the placeholder with the authorized harness ARN; verify the region. |
-| No AWS credentials | Use a valid profile or role. The public walkthrough requires none. |
-| Boto3 session type error | `runtimeSessionId` needs `str(uuid.uuid4())`, not a UUID object. |
-| Live model appears stuck | Check the current Stage 2/4 status; after a stream read timeout the UI reports an error. Check `HARNESS_READ_TIMEOUT` and the authorized harness logs. |
-| A replay has no data | Complete an authorized Live-mode flow to save diagnosis, approval, and training output. The handwritten walkthrough does not create saved runs. |
+| Missing module | Activate `.venv`; rerun `pip install -r requirements.lock`. |
+| "Harness ARN rejected" | Replace the placeholder with the real ARN; check the region. |
+| No credentials | Use a valid profile or role. The offline demonstration needs none. |
+| Live run appears stuck | Check `HARNESS_READ_TIMEOUT`; a stalled stream ends with an explained error. |
+| Replay has no data | A live run must finish first. The offline demonstration does not create saved runs. |
+| Upload rejected | The message lists each problem by row. Download the CSV template from Intake. |
+| Table is cut off on a narrow window | Widen the window or use the table's own scroll bar. |
 
-Replay displays a completed saved diagnosis and training package with its original recorded approval when one exists. It does not generate new modules or record a new supervisor decision. A diagnosis-only run cannot be replayed as a completed training package.
+## Private local exports
 
-The private-data path is described in [Security](SECURITY.md). I keep it disabled unless the dataset and processing environment are approved for that use.
-
-For an authorized *local-only* private-data intake check, the parser expects the following files in a separate, Git-ignored `data/` folder: `process_qa.xlsx`, `compliance_qa.xlsx`, `experience_qa.xlsx`, and `training_outline.xlsx`. The upstream exports may have longer filenames, so rename local copies to these expected names. The private-data switches are not permission to upload real member information to AWS. **Never commit the original exports or any result containing private records.**
-
+For an authorized, local-only check the parser expects `process_qa.xlsx`, `compliance_qa.xlsx`, `experience_qa.xlsx` and `training_outline.xlsx` in a Git-ignored `data/` folder, with `QA_DATA_SOURCE=private` and `ALLOW_PRIVATE_QA_READ=1`. The switches are friction, not permission. Never commit those files or any output that contains private records. See [Security](SECURITY.md).

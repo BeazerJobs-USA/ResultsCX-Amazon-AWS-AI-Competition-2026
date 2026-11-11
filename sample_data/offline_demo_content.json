@@ -1,0 +1,1037 @@
+{
+  "notice": "Handwritten demonstration content for the built-in synthetic dataset. It is not model output, not ResultsCX material, and not an organization's policy.",
+  "summary": "This demonstration analysis covers four QA requirements with failed items in the invented dataset. Two are coaching candidates with medium confidence (identity verification and case-note documentation), one looks like a tool problem rather than a training need (recording disclosure), and one is a low-confidence coaching candidate (confirming next steps). It was written by hand to show the workflow; no model produced it.",
+  "open_questions": [
+    "Are the current verification steps clear in the call-handling tool?",
+    "Is the recording-disclosure prompt missing for other employees as well?",
+    "Do handle-time targets affect how calls are closed?"
+  ],
+  "cases": [
+    {
+      "source": "CO",
+      "behavior": "Confirm identity before discussing account details",
+      "finding": {
+        "id": "F1",
+        "title": "Account details discussed before identity verification was complete",
+        "observed": "On three evaluations the evaluator recorded that verification was skipped or left unfinished before the account was discussed. One employee missed the step on two separate evaluations.",
+        "root_cause_type": "Skill Gap",
+        "root_cause": "In two of the three comments the caller opened with a specific request and the employee began answering it before verifying. That suggests the step is known but is dropped when a call starts with a question. This reading rests on three comments and has not been confirmed with the employees.",
+        "pattern": "Two of four employees, one of them twice.",
+        "evidence_record_ids": [
+          "CO-001",
+          "CO-003",
+          "CO-005"
+        ],
+        "curriculum_coverage": "Partial",
+        "curriculum_note": "Week 1 / Day 2 'Identity verification' covers the required identifiers. Nothing in the outline practises holding verification when the caller opens with a request.",
+        "training_recommended": true,
+        "recommended_intervention": "simulation",
+        "confidence": "medium",
+        "confidence_note": "Three failed items from two employees. The comments do not say which verification step was missed, and the cause could differ between the two employees.",
+        "corrective_actions": [
+          "Practise completing verification before acknowledging any account detail, using a caller who opens with a specific request.",
+          "Coach the employee who missed the step twice individually before the group practice.",
+          "Ask the compliance owner to confirm the current verification steps so the practice matches them."
+        ]
+      },
+      "module": {
+        "module_title": "Verify first: holding identity verification when the caller opens with a request",
+        "learning_objective": "By the end of this session the employee completes every identity-verification step before acknowledging or sharing any account, plan, claim, or benefit detail, including when the caller opens with a specific question.",
+        "why_this_fixes_the_gap": "The failed evaluations describe account details being discussed before verification was finished. The practice repeats that exact moment until verifying first is the default response.",
+        "delivery": "simulation",
+        "duration_minutes": 30,
+        "instruction": [
+          "State the rule in one sentence: no account detail is acknowledged or shared until verification is complete.",
+          "Acknowledge the caller's request without confirming anything about the account, then move straight to verification.",
+          "Ask the verification questions in the organization's approved order and wait for each answer.",
+          "If the caller cannot answer, follow the approved alternative path or stop. Do not fill in or hint at the answer.",
+          "If the caller pushes back, explain that verification protects their information and continue.",
+          "Only after verification, restate the request and begin helping."
+        ],
+        "existing_material_to_reuse": [
+          "Week 1 / Day 2 / Identity verification: Confirm required identifiers before discussing account details."
+        ],
+        "knowledge_check": {
+          "question": "A caller says, \"I'm calling about the update to my plan. Did it go through?\" before you have verified their identity. What do you do first?",
+          "options": [
+            "A) Tell them the update went through, then verify their identity",
+            "B) Acknowledge the request and complete identity verification before confirming anything about the account",
+            "C) Ask what the update was so you can look it up while you verify",
+            "D) Verify only if the caller sounds unsure"
+          ],
+          "correct": "B",
+          "feedback": "Confirming that an update exists is already an account detail, so verification comes before any confirmation. Option C is tempting, but it starts the account discussion before the caller is verified."
+        },
+        "additional_knowledge_checks": [
+          {
+            "question": "During identity verification the caller cannot answer one of the required questions and asks you for a hint. What is the right response?",
+            "options": [
+              "A) Use the approved alternative verification step, or explain that you cannot continue without verification",
+              "B) Give the first part of the answer so they can complete it",
+              "C) Skip that question because the other answers were correct"
+            ],
+            "correct": "A",
+            "feedback": "A hint or a skipped question means verification was not completed. The approved alternative path exists for this situation."
+          },
+          {
+            "question": "A caller says they are the member's spouse and asks about a recent claim before any identity verification. Which response meets the requirement?",
+            "options": [
+              "A) Share the claim status because a spouse is family",
+              "B) Share the claim status once the caller gives the member's date of birth",
+              "C) Explain that you must confirm the caller is verified and permitted to receive the information before discussing the claim"
+            ],
+            "correct": "C",
+            "feedback": "Being related to the member does not establish who the caller is or whether they may receive account information. Your organization's approved procedure decides that, not the call."
+          }
+        ],
+        "hands_on_exercise": {
+          "title": "Three openings, verify first each time",
+          "trainee_instructions": "Take three practice calls in a row. Each caller opens with a different request: a plan update, a claim question, and an address change. Respond to each opening and complete verification before anything else.",
+          "facilitator_instructions": "Play the caller. On the second call, push back once (\"I'm in a hurry, can you just tell me?\"). Rate each success criterion after every call and give feedback before the next one.",
+          "success_criteria": [
+            "Acknowledges the request without confirming any account detail",
+            "Completes every verification step before discussing the account",
+            "Does not hint at or fill in a verification answer",
+            "Stays courteous when the caller pushes back"
+          ]
+        },
+        "simulation_scenario": {
+          "scenario_id": "DEMO-ID-1",
+          "call_driver": "A fictional member calls to check whether a plan update was processed.",
+          "member_persona": "Dana, fictional member in her fifties, organized and short on time",
+          "member_emotion": "Impatient: wants a yes or no quickly",
+          "scenario_context": "Dana submitted a plan change last week and wants to know whether it went through. She opens the call with the question and will ask the agent to skip the verification questions.",
+          "behavioral_target": "Confirm identity before discussing account details",
+          "expected_agent_response": "Acknowledges the question, completes every verification step in the approved order before confirming anything about the account, and stays courteous when asked to skip ahead.",
+          "scoring_criteria": [
+            "Completed all verification steps before any account detail was acknowledged",
+            "Did not confirm the existence or status of the plan update before verification",
+            "Explained why verification is required when challenged",
+            "Returned to the member's request after verification"
+          ]
+        },
+        "roleplay_script": [
+          {
+            "speaker": "MEMBER",
+            "line": "Hi, I'm calling about the update to my plan. Did it go through?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "I can help you with that. Before I look at anything on the account, I need to verify your identity.",
+            "coach_note": "No account detail is confirmed here, not even that an update exists."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "I'm in a bit of a hurry. Can you just tell me yes or no?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "I understand, and I'll be quick. Verifying first keeps your information protected. Let's go through the questions.",
+            "coach_note": "Acknowledge the pressure, keep the order."
+          },
+          {
+            "speaker": "BRANCH",
+            "if_agent_demonstrates_behavior": "The member answers the verification questions and the call continues.",
+            "if_agent_does_not": "The member thanks the agent for confirming the update. Coach note: the account was discussed before verification. Stop and restart from the opening."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "Fine. Go ahead."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Thank you. I'll ask each verification question in turn.",
+            "coach_note": "Every step, in the approved order, waiting for each answer."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "I don't remember the last one. Can you give me a hint?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "I can't give hints, but there is an approved alternative way to verify you. Let's use that.",
+            "coach_note": "No hints and no skipped steps."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "All right, that works."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Thank you, you're verified. Now, about your plan update.",
+            "coach_note": "Only now does the account discussion begin."
+          }
+        ],
+        "roleplay_decisions": [
+          {
+            "id": "d1",
+            "member_line": "Hi, I'm calling about the update to my plan. Did it go through?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "Yes, I can see the update on your plan. Let me just verify you quickly.",
+                "demonstrates_behavior": false,
+                "member_reaction": "Great, that's all I needed to know.",
+                "coach_feedback": "Confirming the update is an account detail, and it was shared before verification. Acknowledge the request without confirming anything, then verify.",
+                "next": "d2"
+              },
+              {
+                "id": "b",
+                "agent_line": "I can help with that. Before I look at anything on the account, I need to verify your identity.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Okay, but I'm in a hurry.",
+                "coach_feedback": "The request is acknowledged and nothing about the account is confirmed.",
+                "next": "d2"
+              }
+            ]
+          },
+          {
+            "id": "d2",
+            "member_line": "I'm in a hurry. Can you just tell me yes or no?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "I understand, and I'll be quick. Verifying first protects your information, so let's go through the questions.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Fine, go ahead.",
+                "coach_feedback": "The pressure is acknowledged and the order is held.",
+                "next": "d3"
+              },
+              {
+                "id": "b",
+                "agent_line": "Since it's just a yes or no, it did go through. I'll verify you before we do anything else.",
+                "demonstrates_behavior": false,
+                "member_reaction": "Perfect, thanks.",
+                "coach_feedback": "A yes-or-no answer is still an account detail. Verification has to come before it.",
+                "next": "d3"
+              },
+              {
+                "id": "c",
+                "agent_line": "I'm not allowed to tell you anything.",
+                "demonstrates_behavior": false,
+                "member_reaction": "That's not very helpful. Why not?",
+                "coach_feedback": "Verification was not started and no reason was given. Explain that verification protects the member, then begin.",
+                "next": "d3"
+              }
+            ]
+          },
+          {
+            "id": "d3",
+            "member_line": "I don't remember the answer to that last question. Can you give me a hint?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "It starts with the same letter as your street name.",
+                "demonstrates_behavior": false,
+                "member_reaction": "Oh, right. I've got it now.",
+                "coach_feedback": "A hint means the caller did not verify themselves. Use the approved alternative step instead.",
+                "next": "end"
+              },
+              {
+                "id": "b",
+                "agent_line": "I can't give hints, but there is an approved alternative way to verify you. Let's use that.",
+                "demonstrates_behavior": true,
+                "member_reaction": "All right, that works.",
+                "coach_feedback": "No hint and no skipped step. The approved alternative path keeps verification complete.",
+                "next": "end"
+              }
+            ]
+          }
+        ],
+        "policy_refresher": {
+          "summary": "The QA requirement is scored Yes only when every verification step is complete before any account, plan, claim, or benefit detail is acknowledged or shared.",
+          "key_points": [
+            "Acknowledging that something exists on the account counts as sharing an account detail.",
+            "Every step is required. A skipped or hinted answer means verification was not completed.",
+            "When the caller cannot verify, use the approved alternative path or do not proceed."
+          ],
+          "confirm_with_policy_owner": [
+            "The current list and order of verification questions.",
+            "The approved alternative verification path.",
+            "The rule for callers who say they are acting for the member."
+          ]
+        },
+        "coaching_notes": {
+          "opening": "Start from the call, not the score: \"I'd like to walk through the start of this call with you and hear how it felt from your side.\"",
+          "questions_to_ask": [
+            "What did the caller say first, and what did you want to do for them?",
+            "At what point did you start verification?",
+            "What makes it hard to verify first when a caller opens with a question?",
+            "What would you say next time in that first sentence?"
+          ],
+          "what_good_looks_like": [
+            "The first response acknowledges the request and moves to verification.",
+            "No account detail is confirmed until every step is done.",
+            "The employee stays courteous when the caller pushes back."
+          ],
+          "commitments_to_agree": [
+            "Use the agreed opening sentence on every call for the next two weeks.",
+            "Raise any call where verification could not be completed."
+          ]
+        },
+        "remediation_plan": {
+          "goal": "The employee completes verification before any account discussion on every evaluated call.",
+          "steps": [
+            {
+              "step": "Coaching conversation using the supervisor notes",
+              "owner": "Supervisor",
+              "timing": "Within three working days"
+            },
+            {
+              "step": "Guided practice and decision-point roleplay",
+              "owner": "Trainer",
+              "timing": "Same week as the coaching conversation"
+            },
+            {
+              "step": "Knowledge check, repeated until passed",
+              "owner": "Employee",
+              "timing": "After the practice session"
+            },
+            {
+              "step": "Follow-up QA evaluation of this requirement",
+              "owner": "Supervisor",
+              "timing": "Two weeks after coaching"
+            }
+          ],
+          "escalation_trigger": "The requirement is scored No again on the follow-up evaluation."
+        },
+        "follow_up_evaluation": {
+          "what_to_evaluate": "Confirm identity before discussing account details",
+          "sample": "The next five evaluated calls for each coached employee",
+          "success_measure": "The requirement is scored Yes on every sampled call",
+          "review_after": "Two weeks after the coaching conversation"
+        }
+      }
+    },
+    {
+      "source": "BP",
+      "behavior": "Document the resolution and next steps accurately",
+      "finding": {
+        "id": "F2",
+        "title": "Case notes missing the next action, owner, or promised date",
+        "observed": "On four evaluations the evaluator recorded case notes that left out the next action, the follow-up owner, or a date promised to the member. Three of four employees were affected, one of them twice.",
+        "root_cause_type": "Knowledge Gap",
+        "root_cause": "Each comment names a different missing element, which suggests employees are not working from a shared definition of a complete note rather than forgetting one specific step. This is an inference from four comments.",
+        "pattern": "Three of four employees, one of them twice.",
+        "evidence_record_ids": [
+          "BP-001",
+          "BP-002",
+          "BP-004",
+          "BP-006"
+        ],
+        "curriculum_coverage": "Partial",
+        "curriculum_note": "Week 2 / Day 3 'Documentation' lists what to record, but the outline shows no worked example of a complete note.",
+        "training_recommended": true,
+        "recommended_intervention": "coaching",
+        "confidence": "medium",
+        "confidence_note": "Four failed items across three employees give a consistent picture, but the comments do not show the notes themselves.",
+        "corrective_actions": [
+          "Agree a four-part checklist for a complete note: resolution, next action, owner, date.",
+          "Review one real note per employee against the checklist in the coaching conversation.",
+          "Ask operations whether the notes template can prompt for the owner and the date."
+        ]
+      },
+      "module": {
+        "module_title": "A complete case note: resolution, next action, owner, date",
+        "learning_objective": "By the end of this session the employee writes a case note that states what was resolved, the next action, who owns it, and any date promised to the member, before closing the interaction.",
+        "why_this_fixes_the_gap": "Each failed evaluation is a note with one of those four elements missing. Practising against a fixed four-part checklist gives every employee the same definition of complete.",
+        "delivery": "coaching",
+        "duration_minutes": 25,
+        "instruction": [
+          "Introduce the four parts of a complete note: resolution, next action, owner, date.",
+          "Show one incomplete note and have the employee name what is missing.",
+          "Write the note before ending the interaction, while the details are fresh.",
+          "Record a promised date exactly as it was given to the member.",
+          "Name the team or person who owns the next action, not just 'follow-up needed'.",
+          "Read the note back against the four parts before closing."
+        ],
+        "existing_material_to_reuse": [
+          "Week 2 / Day 3 / Documentation: Record the resolution, next step, and follow-up owner."
+        ],
+        "knowledge_check": {
+          "question": "Which case note documents the resolution and next steps accurately?",
+          "options": [
+            "A) Member called about a billing question. Discussed and resolved.",
+            "B) Explained the billing adjustment. Next: billing team to confirm the corrected amount. Promised the member a call back by the 14th.",
+            "C) Member was satisfied at the end of the call. No further notes needed.",
+            "D) Billing issue. Follow-up needed."
+          ],
+          "correct": "B",
+          "feedback": "Only B states the resolution, the next action, who owns it, and the date promised. D is the tempting one: it mentions a follow-up but not what, who, or when."
+        },
+        "additional_knowledge_checks": [
+          {
+            "question": "You told the member that the claims team will call them back by Friday. Which detail must appear in the case note?",
+            "options": [
+              "A) That the member was polite",
+              "B) How long the call lasted",
+              "C) The Friday call-back date and that the claims team owns it"
+            ],
+            "correct": "C",
+            "feedback": "A date promised to the member and the owner of the next action are both part of a complete note. Without them the next person cannot keep the promise."
+          },
+          {
+            "question": "A call ends with the issue resolved and nothing left to do. What should the note say about next steps?",
+            "options": [
+              "A) State the resolution and that no further action is required",
+              "B) Nothing, because there are none",
+              "C) 'Follow-up needed' in case something comes up"
+            ],
+            "correct": "A",
+            "feedback": "Saying that no action is required is itself the next-step information. A blank looks unfinished, and a vague 'follow-up needed' creates work that does not exist."
+          }
+        ],
+        "hands_on_exercise": {
+          "title": "Complete the note",
+          "trainee_instructions": "Read three short fictional interaction summaries. For each one, write the case note using the four parts: resolution, next action, owner, date.",
+          "facilitator_instructions": "Check each note against the four parts. Where a part is missing, ask the employee what the next person reading the note would need to know.",
+          "success_criteria": [
+            "States what was resolved",
+            "States the next action, or that none is required",
+            "Names who owns the next action",
+            "Records any date promised to the member"
+          ]
+        },
+        "simulation_scenario": {
+          "scenario_id": "DEMO-DOC-1",
+          "call_driver": "A fictional member asks whether a billing adjustment has been applied.",
+          "member_persona": "Lee, fictional member in his forties, has called twice about the same adjustment",
+          "member_emotion": "Tired of repeating the story",
+          "scenario_context": "The adjustment has been approved but the corrected amount still has to be confirmed by another team. The agent promises a call back. The practice is scored on the note written at the end.",
+          "behavioral_target": "Document the resolution and next steps accurately",
+          "expected_agent_response": "Explains what was resolved, tells the member who will confirm the amount and by when, and writes a note containing the resolution, next action, owner, and date before closing.",
+          "scoring_criteria": [
+            "Note states the resolution accurately",
+            "Note states the next action",
+            "Note names the owner of the next action",
+            "Note records the call-back date given to the member"
+          ]
+        },
+        "roleplay_script": [
+          {
+            "speaker": "MEMBER",
+            "line": "I've called twice about this adjustment. Has it been applied?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "I'm sorry you've had to call again. The adjustment is approved. The corrected amount still needs to be confirmed, and I'll make sure that is recorded.",
+            "coach_note": "States the resolution plainly."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "Who is going to confirm it?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "The billing team will confirm the corrected amount. I'm recording them as the owner in your case notes now.",
+            "coach_note": "Names the owner out loud and in the note."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "And when will I hear back?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "You'll get a call back by the 14th. I'm adding that date to the notes so anyone you speak to can see it.",
+            "coach_note": "The promised date goes into the note exactly as given."
+          },
+          {
+            "speaker": "BRANCH",
+            "if_agent_demonstrates_behavior": "The member says they are glad they will not have to explain it all again.",
+            "if_agent_does_not": "The member asks who will take ownership and what happens next. Coach note: the note is missing the owner or the date. Rewrite it against the four parts."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "Good. I don't want to explain this a third time."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "You won't need to. The note has what was resolved, the next step, who owns it, and the date.",
+            "coach_note": "Reads the note back against the four parts before closing."
+          }
+        ],
+        "roleplay_decisions": [
+          {
+            "id": "d1",
+            "member_line": "I've called twice about this adjustment. Has it been applied?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "It's approved. The corrected amount still has to be confirmed, and I'm recording that as the next step.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Okay. Who confirms it?",
+                "coach_feedback": "The resolution and the open item are both stated, and the open item is going into the note.",
+                "next": "d2"
+              },
+              {
+                "id": "b",
+                "agent_line": "It's all taken care of.",
+                "demonstrates_behavior": false,
+                "member_reaction": "That's what I was told last time.",
+                "coach_feedback": "Nothing is recorded about what remains to be done. State the resolution and the open item, and note both.",
+                "next": "d2"
+              }
+            ]
+          },
+          {
+            "id": "d2",
+            "member_line": "Who is going to confirm the amount, and when will I hear?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "Someone will be in touch soon.",
+                "demonstrates_behavior": false,
+                "member_reaction": "Soon? That's what the last person said.",
+                "coach_feedback": "No owner and no date. Name the team and the date, and put both in the note.",
+                "next": "d3"
+              },
+              {
+                "id": "b",
+                "agent_line": "The billing team will confirm it and you'll get a call back by the 14th. I'm adding both to your case notes.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Thank you. That's clear.",
+                "coach_feedback": "Owner and date are stated and recorded exactly as promised.",
+                "next": "d3"
+              }
+            ]
+          },
+          {
+            "id": "d3",
+            "member_line": "I don't want to explain this a third time.",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "You won't need to. The note has the resolution, the next step, the owner, and the date.",
+                "demonstrates_behavior": true,
+                "member_reaction": "That's a relief.",
+                "coach_feedback": "The note was checked against all four parts before closing.",
+                "next": "end"
+              },
+              {
+                "id": "b",
+                "agent_line": "I understand. Is there anything else I can help with?",
+                "demonstrates_behavior": false,
+                "member_reaction": "No... I suppose not.",
+                "coach_feedback": "The call was closed without checking the note. Read it back against the four parts first.",
+                "next": "end"
+              }
+            ]
+          }
+        ],
+        "policy_refresher": {
+          "summary": "The QA requirement is scored Yes when the case note states what was resolved, the next action, who owns it, and any date promised to the member.",
+          "key_points": [
+            "A note that only says the issue was discussed is scored No.",
+            "A promised date is recorded exactly as it was given to the member.",
+            "If nothing remains to be done, the note says so."
+          ],
+          "confirm_with_policy_owner": [
+            "The notes template or required fields in the current case system.",
+            "Any wording the organization requires for call-back commitments."
+          ]
+        },
+        "coaching_notes": {
+          "opening": "Bring one of the employee's own notes: \"Let's read this note the way the next person on the case would.\"",
+          "questions_to_ask": [
+            "If you picked up this case tomorrow, what would you need to know?",
+            "Which of the four parts is easiest to leave out, and why?",
+            "When during the call do you write the note?"
+          ],
+          "what_good_looks_like": [
+            "All four parts appear in the note.",
+            "The owner is a named team or person.",
+            "The promised date matches what the member was told."
+          ],
+          "commitments_to_agree": [
+            "Check every note against the four parts before closing for the next two weeks.",
+            "Bring two notes to the next one-to-one for review."
+          ]
+        },
+        "remediation_plan": {
+          "goal": "Every evaluated case note contains the resolution, next action, owner, and date.",
+          "steps": [
+            {
+              "step": "Coaching conversation with one of the employee's own notes",
+              "owner": "Supervisor",
+              "timing": "Within one week"
+            },
+            {
+              "step": "Complete-the-note exercise",
+              "owner": "Trainer",
+              "timing": "Same week"
+            },
+            {
+              "step": "Knowledge check, repeated until passed",
+              "owner": "Employee",
+              "timing": "After the exercise"
+            },
+            {
+              "step": "Review of five notes written after coaching",
+              "owner": "Supervisor",
+              "timing": "Two weeks after coaching"
+            }
+          ],
+          "escalation_trigger": "Two or more of the five reviewed notes are still missing a required part."
+        },
+        "follow_up_evaluation": {
+          "what_to_evaluate": "Document the resolution and next steps accurately",
+          "sample": "Five case notes written after coaching, per employee",
+          "success_measure": "All five notes contain the resolution, next action, owner, and date",
+          "review_after": "Two weeks after the coaching conversation"
+        }
+      }
+    },
+    {
+      "source": "CO",
+      "behavior": "Read the required call recording disclosure",
+      "finding": {
+        "id": "F3",
+        "title": "Recording disclosure not read: prompt reported missing from the call tool",
+        "observed": "One evaluation was scored No because the recording disclosure was not read. The evaluator noted the employee's report that the disclosure prompt did not appear in the call-handling tool. On a later evaluation the same employee read the disclosure from memory and noted the prompt was still missing.",
+        "root_cause_type": "Process Gap",
+        "root_cause": "Both comments point to the tool not showing the prompt rather than the employee not knowing the requirement: the employee read the disclosure unprompted on the later call. If the prompt is missing for other employees, more misses are likely. Nobody has checked the tool itself.",
+        "pattern": "One employee, one failed evaluation.",
+        "evidence_record_ids": [
+          "CO-012",
+          "CO-016"
+        ],
+        "curriculum_coverage": "Yes",
+        "curriculum_note": "Week 1 / Day 1 'Call opening' covers the recording disclosure.",
+        "training_recommended": false,
+        "recommended_intervention": "escalate to operations",
+        "confidence": "low",
+        "confidence_note": "One failed item. The explanation depends on the employee's report, which has not been verified against the tool.",
+        "corrective_actions": [
+          "Ask operations to check whether the disclosure prompt is displaying for all employees.",
+          "Until it is fixed, remind the team to read the disclosure from the quick-reference card.",
+          "Re-evaluate once the prompt is confirmed working."
+        ]
+      },
+      "not_a_training_problem": "Recording disclosure (F3): the evidence points to a prompt missing from the call-handling tool. Training would not fix a tool that does not display the prompt.",
+      "module": {
+        "module_title": "Read the recording disclosure on every call, with or without the prompt",
+        "learning_objective": "By the end of this session the employee reads the call recording disclosure at the start of every call, including when the tool does not display the prompt.",
+        "why_this_fixes_the_gap": "The failed evaluation happened when the prompt was missing. Until the tool is fixed, the disclosure has to be read without relying on it.",
+        "delivery": "coaching",
+        "duration_minutes": 15,
+        "instruction": [
+          "Read the disclosure at the start of the call, before the reason for the call is discussed.",
+          "Keep the approved disclosure wording on a quick-reference card.",
+          "If the prompt does not appear, read from the card and report the missing prompt after the call.",
+          "Do not paraphrase the disclosure."
+        ],
+        "existing_material_to_reuse": [
+          "Week 1 / Day 1 / Call opening: Greeting and the call recording disclosure."
+        ],
+        "knowledge_check": {
+          "question": "The call recording disclosure prompt does not appear in the tool at the start of a call. What do you do?",
+          "options": [
+            "A) Skip the disclosure because the tool did not ask for it",
+            "B) Read the required recording disclosure from the quick-reference card, then report the missing prompt",
+            "C) Mention the recording at the end of the call"
+          ],
+          "correct": "B",
+          "feedback": "The requirement is to read the disclosure at the start of the call. The prompt is a reminder, not the requirement."
+        },
+        "additional_knowledge_checks": [
+          {
+            "question": "When must the call recording disclosure be read?",
+            "options": [
+              "A) After identity verification is finished",
+              "B) Only if the member asks whether the call is recorded",
+              "C) At the start of the call, before the reason for the call is discussed"
+            ],
+            "correct": "C",
+            "feedback": "The QA requirement places the disclosure at the start of the call, before the reason for the call is discussed."
+          }
+        ],
+        "hands_on_exercise": {
+          "title": "Disclosure without the prompt",
+          "trainee_instructions": "Open three practice calls with the tool prompt hidden. Read the disclosure from the card each time.",
+          "facilitator_instructions": "Hide the prompt. Check that the wording matches the card and comes before anything else.",
+          "success_criteria": [
+            "Reads the disclosure before the reason for the call is discussed",
+            "Uses the approved wording",
+            "Reports the missing prompt after the call"
+          ]
+        },
+        "simulation_scenario": {
+          "scenario_id": "DEMO-REC-1",
+          "call_driver": "A fictional member calls with a general benefits question.",
+          "member_persona": "Ana, fictional member in her thirties, calm",
+          "member_emotion": "Neutral",
+          "scenario_context": "The call-handling tool does not display the disclosure prompt when the call connects.",
+          "behavioral_target": "Read the required call recording disclosure",
+          "expected_agent_response": "Greets the member and reads the recording disclosure from the card before asking how to help, then reports the missing prompt afterwards.",
+          "scoring_criteria": [
+            "Read the disclosure at the start of the call",
+            "Used the approved wording",
+            "Reported the missing prompt"
+          ]
+        },
+        "roleplay_script": [
+          {
+            "speaker": "MEMBER",
+            "line": "Hello, I have a question about my benefits."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Thank you for calling. Before we begin, I need to read a short disclosure about call recording.",
+            "coach_note": "The disclosure comes before the reason for the call."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "Sure."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "(Reads the approved recording disclosure from the quick-reference card.)",
+            "coach_note": "Approved wording, not a paraphrase."
+          },
+          {
+            "speaker": "BRANCH",
+            "if_agent_demonstrates_behavior": "The member says that is fine and the call continues.",
+            "if_agent_does_not": "The call continues with no disclosure. Coach note: the requirement was missed even though the prompt was absent."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "That's fine."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Thank you. Now, how can I help with your benefits?",
+            "coach_note": "Only now does the call move on."
+          }
+        ],
+        "roleplay_decisions": [
+          {
+            "id": "d1",
+            "member_line": "Hello, I have a question about my benefits. (The disclosure prompt has not appeared in the tool.)",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "Of course. What would you like to know?",
+                "demonstrates_behavior": false,
+                "member_reaction": "Well, I wanted to check my coverage...",
+                "coach_feedback": "The disclosure was skipped. Read it from the card before asking how to help.",
+                "next": "d2"
+              },
+              {
+                "id": "b",
+                "agent_line": "Thank you for calling. Before we begin, I need to read a short disclosure about call recording.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Sure.",
+                "coach_feedback": "The disclosure comes first even though the prompt is missing.",
+                "next": "d2"
+              }
+            ]
+          },
+          {
+            "id": "d2",
+            "member_line": "Sure. Go ahead.",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "(Reads the approved recording disclosure from the quick-reference card.)",
+                "demonstrates_behavior": true,
+                "member_reaction": "That's fine.",
+                "coach_feedback": "The approved wording was used.",
+                "next": "end"
+              },
+              {
+                "id": "b",
+                "agent_line": "This call might be recorded, I think. Anyway, how can I help?",
+                "demonstrates_behavior": false,
+                "member_reaction": "Oh, okay.",
+                "coach_feedback": "A paraphrase is not the approved disclosure. Read the wording from the card.",
+                "next": "end"
+              }
+            ]
+          }
+        ],
+        "policy_refresher": {
+          "summary": "The QA requirement is scored Yes when the recording disclosure is read at the start of the call, before the reason for the call is discussed.",
+          "key_points": [
+            "The prompt in the tool is a reminder. The requirement applies whether or not it appears.",
+            "The approved wording is read, not paraphrased."
+          ],
+          "confirm_with_policy_owner": [
+            "The current approved disclosure wording.",
+            "How to report a missing prompt."
+          ]
+        },
+        "coaching_notes": {
+          "opening": "\"I know the prompt didn't appear. Let's make sure you're covered until it's fixed.\"",
+          "questions_to_ask": [
+            "What did you see on screen when the call connected?",
+            "Where do you keep the disclosure wording?"
+          ],
+          "what_good_looks_like": [
+            "The disclosure is read from the card when the prompt is missing."
+          ],
+          "commitments_to_agree": [
+            "Report every call where the prompt does not appear."
+          ]
+        },
+        "remediation_plan": {
+          "goal": "The disclosure is read on every call while the tool issue is open.",
+          "steps": [
+            {
+              "step": "Report the missing prompt to operations",
+              "owner": "Supervisor",
+              "timing": "Immediately"
+            },
+            {
+              "step": "Brief the employee on reading from the card",
+              "owner": "Supervisor",
+              "timing": "Same day"
+            },
+            {
+              "step": "Re-evaluate once the prompt is confirmed working",
+              "owner": "Supervisor",
+              "timing": "After operations confirm the fix"
+            }
+          ],
+          "escalation_trigger": "The prompt is still missing after operations report it fixed."
+        },
+        "follow_up_evaluation": {
+          "what_to_evaluate": "Read the required call recording disclosure",
+          "sample": "The next three evaluated calls for the employee",
+          "success_measure": "The requirement is scored Yes on every sampled call",
+          "review_after": "After operations confirm the prompt is working"
+        }
+      }
+    },
+    {
+      "source": "ME",
+      "behavior": "Confirm understanding and next steps",
+      "finding": {
+        "id": "F4",
+        "title": "Calls closed without confirming the member understood the next steps",
+        "observed": "On two evaluations the evaluator recorded that the call ended without the employee checking whether the next steps were clear. In one, the member asked what would happen next and the call was closed without an answer.",
+        "root_cause_type": "Skill Gap",
+        "root_cause": "Both comments describe the closing moments of the call, where the summary and the confirmation were dropped. This may reflect pressure to end calls quickly, but two comments are not enough to say so.",
+        "pattern": "Two of four employees, once each.",
+        "evidence_record_ids": [
+          "ME-002",
+          "ME-008"
+        ],
+        "curriculum_coverage": "Yes",
+        "curriculum_note": "Week 2 / Day 4 'Communication' covers summarizing next steps and confirming understanding.",
+        "training_recommended": true,
+        "recommended_intervention": "coaching",
+        "confidence": "low",
+        "confidence_note": "Two failed items from two employees. A supervisor should check whether handle-time targets are a factor before coaching.",
+        "corrective_actions": [
+          "Coach a two-sentence close: summarize the next step, then ask the member to confirm it.",
+          "Check with the two employees whether call-length pressure played a part."
+        ]
+      },
+      "module": {
+        "module_title": "Close the call: summarize the next step and confirm understanding",
+        "learning_objective": "By the end of this session the employee ends every call by summarizing the next steps and confirming that the member understands them.",
+        "why_this_fixes_the_gap": "Both failed evaluations describe calls that ended without that check. A fixed two-sentence close makes the behavior quick enough to use on every call.",
+        "delivery": "coaching",
+        "duration_minutes": 20,
+        "instruction": [
+          "Use a two-sentence close: state the next step, then ask the member to confirm it.",
+          "Say who does what, and by when, in the summary.",
+          "Ask an open check such as \"What will you be expecting from us?\" rather than \"Is that okay?\".",
+          "If the member asks what happens next, answer before closing.",
+          "Do not start the closing script until the confirmation is given."
+        ],
+        "existing_material_to_reuse": [
+          "Week 2 / Day 4 / Communication: Summarize the next steps and confirm understanding."
+        ],
+        "knowledge_check": {
+          "question": "Which closing confirms understanding and next steps with the member?",
+          "options": [
+            "A) \"Is there anything else? Thanks for calling.\"",
+            "B) \"So the claims team will call you by Friday. Can you tell me what you'll be expecting from us?\"",
+            "C) \"You should be all set.\""
+          ],
+          "correct": "B",
+          "feedback": "B summarizes the next step and checks understanding with a question the member has to answer. A and C end the call without either."
+        },
+        "additional_knowledge_checks": [
+          {
+            "question": "The member asks, \"So what happens now?\" as you begin your closing. What do you do?",
+            "options": [
+              "A) Answer the question, summarize the next step, and confirm they understand before closing",
+              "B) Finish the closing script, since the call is ending",
+              "C) Tell them it is in the notes"
+            ],
+            "correct": "A",
+            "feedback": "A member asking what happens next has not understood the next steps. Closing without answering is what the evaluator scored No."
+          },
+          {
+            "question": "Which question best checks that the member understood the next step?",
+            "options": [
+              "A) \"Okay?\"",
+              "B) \"Does that make sense?\"",
+              "C) \"What will you be expecting from us after this call?\""
+            ],
+            "correct": "C",
+            "feedback": "An open question lets you hear the member's understanding. A yes to the other two does not show what they understood."
+          }
+        ],
+        "hands_on_exercise": {
+          "title": "The two-sentence close",
+          "trainee_instructions": "Close three practice calls. Each time, summarize the next step in one sentence and ask the member to confirm it in the next.",
+          "facilitator_instructions": "Play the member. On one call, answer the confirmation question incorrectly so the employee has to correct the misunderstanding.",
+          "success_criteria": [
+            "Summarizes who does what and by when",
+            "Asks a question the member must answer in their own words",
+            "Corrects a misunderstanding before closing"
+          ]
+        },
+        "simulation_scenario": {
+          "scenario_id": "DEMO-CLOSE-1",
+          "call_driver": "A fictional member calls about a referral that needs approval.",
+          "member_persona": "Sam, fictional member in his sixties, unfamiliar with the process",
+          "member_emotion": "Uncertain: not sure what he is supposed to do next",
+          "scenario_context": "The referral has been sent for approval and the member will be contacted with the outcome. The member does not need to do anything, but is unsure about that.",
+          "behavioral_target": "Confirm understanding and next steps",
+          "expected_agent_response": "Summarizes that the approval team will contact the member, makes clear the member does not need to do anything, and checks understanding with an open question before closing.",
+          "scoring_criteria": [
+            "Summarized the next step before closing",
+            "Checked understanding with an open question",
+            "Answered the member's question about what happens next"
+          ]
+        },
+        "roleplay_script": [
+          {
+            "speaker": "MEMBER",
+            "line": "So is that everything?"
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Almost. Let me summarize: the approval team will contact you with the outcome, and you don't need to do anything until then.",
+            "coach_note": "The summary names who acts and what the member does."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "Okay."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Just so I know I explained it clearly, what will you be expecting from us?",
+            "coach_note": "An open question, not \"okay?\"."
+          },
+          {
+            "speaker": "BRANCH",
+            "if_agent_demonstrates_behavior": "The member repeats the next step correctly and the call closes.",
+            "if_agent_does_not": "The member calls back the next day asking whether he was supposed to do something. Coach note: the close skipped the confirmation."
+          },
+          {
+            "speaker": "MEMBER",
+            "line": "That someone will call me about the approval."
+          },
+          {
+            "speaker": "AGENT",
+            "line": "Exactly right. Thank you for calling.",
+            "coach_note": "Close only after the confirmation."
+          }
+        ],
+        "roleplay_decisions": [
+          {
+            "id": "d1",
+            "member_line": "So is that everything?",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "Yes, you're all set. Thanks for calling.",
+                "demonstrates_behavior": false,
+                "member_reaction": "Oh. Okay, bye.",
+                "coach_feedback": "The call ended with no summary and no check. Summarize the next step first.",
+                "next": "d2"
+              },
+              {
+                "id": "b",
+                "agent_line": "Almost. To summarize: the approval team will contact you with the outcome, and you don't need to do anything until then.",
+                "demonstrates_behavior": true,
+                "member_reaction": "Okay.",
+                "coach_feedback": "The next step is stated, including what the member does.",
+                "next": "d2"
+              }
+            ]
+          },
+          {
+            "id": "d2",
+            "member_line": "Okay.",
+            "options": [
+              {
+                "id": "a",
+                "agent_line": "Just so I know I explained it clearly, what will you be expecting from us?",
+                "demonstrates_behavior": true,
+                "member_reaction": "That someone will call me about the approval.",
+                "coach_feedback": "An open question shows what the member actually understood.",
+                "next": "end"
+              },
+              {
+                "id": "b",
+                "agent_line": "Great. Does that make sense?",
+                "demonstrates_behavior": false,
+                "member_reaction": "Yes, I think so.",
+                "coach_feedback": "A yes does not show what was understood. Ask a question the member answers in their own words.",
+                "next": "end"
+              }
+            ]
+          }
+        ],
+        "policy_refresher": {
+          "summary": "The QA requirement is scored Yes when the employee summarizes the next steps and confirms the member understands them before the call ends.",
+          "key_points": [
+            "Both parts are required: the summary and the confirmation.",
+            "If the member asks what happens next, the answer comes before the close."
+          ],
+          "confirm_with_policy_owner": [
+            "Any required closing statement in the current call script."
+          ]
+        },
+        "coaching_notes": {
+          "opening": "\"Let's listen to how this call ended and what the member knew when they hung up.\"",
+          "questions_to_ask": [
+            "What did the member know about the next step when the call ended?",
+            "What gets in the way of the summary at the end of a call?",
+            "Which question would you use to check understanding?"
+          ],
+          "what_good_looks_like": [
+            "A one-sentence summary of who does what and by when.",
+            "An open question that the member answers in their own words."
+          ],
+          "commitments_to_agree": [
+            "Use the two-sentence close on every call for the next two weeks."
+          ]
+        },
+        "remediation_plan": {
+          "goal": "Every evaluated call ends with a summary and a confirmed understanding of the next steps.",
+          "steps": [
+            {
+              "step": "Coaching conversation",
+              "owner": "Supervisor",
+              "timing": "Within one week"
+            },
+            {
+              "step": "Two-sentence close practice",
+              "owner": "Trainer",
+              "timing": "Same week"
+            },
+            {
+              "step": "Follow-up QA evaluation of this requirement",
+              "owner": "Supervisor",
+              "timing": "Two weeks after coaching"
+            }
+          ],
+          "escalation_trigger": "The requirement is scored No again on the follow-up evaluation."
+        },
+        "follow_up_evaluation": {
+          "what_to_evaluate": "Confirm understanding and next steps",
+          "sample": "The next five evaluated calls for each coached employee",
+          "success_measure": "The requirement is scored Yes on every sampled call",
+          "review_after": "Two weeks after the coaching conversation"
+        }
+      }
+    }
+  ]
+}

@@ -66,28 +66,35 @@ class PrivacyCheckpointTests(unittest.TestCase):
         self.assertNotIn("404-555-0199", prompt)
 
 
-class ComplianceAlertTests(unittest.TestCase):
-    def test_failed_identity_checks_are_flagged_from_qa_scores(self):
-        data = get_data.get_all_data(source_override="synthetic")
-        flags = security_controls.critical_compliance_alerts(data)
-        self.assertEqual({f["record_id"] for f in flags}, {"CO-001", "CO-003"})
-        self.assertTrue(all(f["agent"].startswith("Agent-") for f in flags))
+class ComplianceFlagTests(unittest.TestCase):
+    """Flags come from workflow.compliance (rule-based, not legal determinations)."""
 
-    def test_noncompliance_and_passing_items_do_not_raise_alert(self):
+    def test_failed_identity_checks_are_flagged_and_raised_on_repeat(self):
+        from workflow import compliance
+
+        data = get_data.get_all_data(source_override="synthetic")
+        flags = compliance.build_flags(data["records"])
+        identity = [f for f in flags.values() if f["category"] == "identity_verification"]
+        self.assertTrue(identity)
+        self.assertTrue(all(f["employee"].startswith("Agent-") for f in identity))
+        self.assertTrue(all(f["privacy_related"] for f in identity))
+        repeated = [f for f in identity if f["repeat_count"] >= 2]
+        self.assertTrue(all(f["rule_risk"] == compliance.CRITICAL for f in repeated))
+
+    def test_passing_items_never_raise_flags(self):
+        from workflow import compliance
+
         records = [
-            {"record_id": "BP-1", "source": "BP", "result": "No", "behavior": "Verify identity"},
-            {"record_id": "CO-1", "source": "CO", "result": "Yes", "behavior": "Verify identity"},
-            {"record_id": "CO-2", "source": "CO", "result": "No", "behavior": "Read greeting"},
+            {"record_id": "CO-1", "source": "CO", "section": "Compliance", "employee": "Agent-01",
+             "team_lead": "TL-01", "call_date": "2026-09-01", "result": "Yes",
+             "requirement": "Verify identity", "comment": ""},
+            {"record_id": "CO-2", "source": "CO", "section": "Compliance", "employee": "Agent-01",
+             "team_lead": "TL-01", "call_date": "2026-09-02", "result": "No",
+             "requirement": "Read greeting", "comment": ""},
         ]
-        # A failed CO row still merits review even without privacy keywords.
-        flags = security_controls.critical_compliance_alerts({"records": records})
-        self.assertEqual([f["record_id"] for f in flags], ["CO-2"])
-        self.assertEqual(flags[0]["priority"], "Compliance review")
-
-    def test_compliance_identity_failure_gets_urgent_priority(self):
-        data = get_data.get_all_data(source_override="synthetic")
-        flags = security_controls.critical_compliance_alerts(data)
-        self.assertTrue(all(f["priority"].startswith("Urgent") for f in flags))
+        flags = compliance.build_flags(records)
+        self.assertNotIn("CO-1", flags)
+        self.assertIn("CO-2", flags)
 
 
 class UnexpectedModelOutputTests(unittest.TestCase):
