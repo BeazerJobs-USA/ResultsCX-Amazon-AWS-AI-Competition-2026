@@ -1,6 +1,6 @@
 # Setup and usage
 
-The offline demonstration needs no AWS account. I tested the app on Python 3.13 with the pinned versions in `requirements.lock` (Streamlit 1.67, boto3 1.43). CI uses Python 3.12.
+The offline demonstration needs no AWS account. I ran the tests on Python 3.13 and 3.12 with the pinned versions in `requirements.lock` (Streamlit 1.67, boto3 1.43). CI uses Python 3.12.
 
 ## Install and run
 

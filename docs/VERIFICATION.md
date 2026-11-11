@@ -11,7 +11,7 @@ python main.py --dry-run
 streamlit run app.py
 ```
 
-**109 tests pass** (Python 3.13, Streamlit 1.67, locked versions). The browser tests need Playwright and Chrome and skip themselves otherwise.
+**109 tests pass** on Python 3.13 (Streamlit 1.67, locked versions). On Python 3.12, which the CI workflow uses, the same locked versions run 106 tests and skip the 3 browser tests, which need Playwright and Chrome. CI therefore does not run the browser tests.
 
 | File | Tests | Runs |
 | --- | --- | --- |
