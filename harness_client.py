@@ -192,7 +192,7 @@ def parse_stream(stream: Any, on_text: Callable[[str], None] | None = None) -> H
                 "the required answer."
             )
         raise HarnessError(
-            f"Bedrock returned {code}.\n"
+            f"Bedrock returned {code}: {str(msg)[:600]}\n"
             "What failed: harness_client.parse_stream (the AWS event stream itself raised an error)\n"
             f"{hint}"
         ) from e
