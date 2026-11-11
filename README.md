@@ -69,7 +69,7 @@ No AWS credentials are needed for the offline demonstration. Setup for live mode
 
 ## Verification
 
-**109 tests pass** on Python 3.13 with the locked dependency set (`requirements.lock`, Streamlit 1.67). On Python 3.12, which CI uses, 106 pass and the 3 browser tests skip because Playwright isn't installed there. None of them call AWS.
+**109 tests pass** on Python 3.13 with the locked dependency set (`requirements.lock`, Streamlit 1.67). On Python 3.12, which CI uses, all 109 also pass with Playwright installed (`requirements-dev.txt`); without it the 3 browser tests skip. None of them call AWS.
 
 | Layer | Tests | What they cover |
 | --- | --- | --- |

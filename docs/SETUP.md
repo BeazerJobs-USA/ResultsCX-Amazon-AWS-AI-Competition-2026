@@ -15,7 +15,7 @@ python -m unittest discover -s tests -v
 streamlit run app.py
 ```
 
-The default source is **Offline demonstration**. In **1 · Intake & Evidence**, use "Load the offline demonstration analysis" to open the handwritten findings, then work through the stages. The browser test needs Playwright and Chrome (`pip install playwright`); it skips itself if either is missing.
+The default source is **Offline demonstration**. In **1 · Intake & Evidence**, use "Load the offline demonstration analysis" to open the handwritten findings, then work through the stages. The browser tests need Playwright and Chrome (`pip install -r requirements-dev.txt`); they skip themselves if either is missing.
 
 ## Terminal checks
 

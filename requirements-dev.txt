@@ -1,0 +1,4 @@
+# Only needed for the optional browser tests (tests/test_browser.py).
+# They drive the installed Chrome or Chromium, so no browser download is required.
+-r requirements.txt
+playwright>=1.50,<2
