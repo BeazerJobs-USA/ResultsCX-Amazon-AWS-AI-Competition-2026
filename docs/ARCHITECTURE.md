@@ -20,10 +20,10 @@ I kept the processing stages separate because the QA numbers, model interpretati
 
 | Stage | Input and decision | Output |
 | --- | --- | --- |
-| **1. Data intake** | Synthetic records or authorized local QA exports; deterministic Python calculations. An interactive calculator models potential time savings with adjustable assumptions. | Behavior metrics, agent-date proxy counts, evidence rows, and hypothetical business case |
-| **2. AI diagnosis** | `build_safe_model_payload()` and `sanitize_model_prompt()` mask recognized identifiers before the authorized harness sees the data, including in tool responses. | Proposed root causes, cited records, intervention suggestions and citation checks |
-| **3. Supervisor review** | A Python rule immediately flags all failed `CO` items, assigning higher review priority to identity/privacy keyword matches. This works independently of model conclusions. A manager can edit the cause, intervention, notes, and training selection. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
-| **4. Coaching generation** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
+| **1. QA intake** | Synthetic records or authorized local QA exports; deterministic Python calculations. A rule flags all failed `CO` items at intake and prioritizes identity and privacy matches. An optional calculator models potential time savings. | Behavior metrics, agent-date proxy counts, evidence rows, and hypothetical business case |
+| **2. Diagnosis draft** | `build_safe_model_payload()` and `sanitize_model_prompt()` mask recognized identifiers before the authorized harness sees the data, including in tool responses. | Proposed root causes, cited records, intervention suggestions and citation checks |
+| **3. Supervisor review** | The displayed alert details link back to the intake flags. A reviewer can edit the cause, intervention, notes, and training selection. An empty selection records a review whose outcome is no training. | Potential-risk review alerts; reviewed findings; excluded findings do not generate modules |
+| **4. Coaching and practice** | A separate training prompt runs for each selected finding | Objectives, instruction, quizzes, exercises, fictional customer scenarios, scripted roleplay and alignment status |
 
 The [main README](../README.md#how-the-application-works) illustrates the four stages. I also keep a [full-size SVG](architecture-flow.svg) and its editable [Graphviz source](architecture-flow.dot) here.
 
@@ -47,7 +47,7 @@ For training-module references, the validator checks that a cited ID exists and 
 
 Only verified citations to the selected behavior and QA source enter the training evidence prompt. Other failure comments for that same behavior and source can still provide supporting context. A new behavior-specific knowledge-check indicator makes superficial alignment gaps visible, but it remains a keyword heuristic rather than a guarantee of educational quality. Incomplete model-generated modules are rejected before being treated as completed training.
 
-Saved-run replay loads the original completed diagnosis, approval record when available, and training package together. It does not create a new approval for previously generated content. The public synthetic mode forces the synthetic fixture even when a local environment has private-data access enabled.
+A completed Live review publishes one replay bundle with a shared run ID, dataset fingerprint, review decision, and explicit training outcome. Publication uses an atomic file replacement. The reader checks the run IDs, dataset, and selected and produced finding IDs before rendering. The public synthetic mode forces the synthetic fixture even when a local environment has private-data access enabled.
 
 ## What I cannot verify from this release
 

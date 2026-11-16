@@ -51,14 +51,14 @@ class PublicWalkthroughIntegrationTests(unittest.TestCase):
         # Widgets inside st.form are submitted as one batch, not on each edit.
         app.button[0].click().run(timeout=30)
         self.assertEqual(len(app.exception), 0)
-        self.assertIsNone(app.session_state.training)
-        self.assertTrue(any("No finding is ticked" in w.value for w in app.warning))
+        self.assertEqual(app.session_state.training["modules"], [])
+        self.assertEqual(app.session_state.approval["approved_findings"], [])
+        self.assertTrue(any("No training was selected" in item.value for item in app.info))
 
     def test_synthetic_ui_progresses_to_training(self):
         with tempfile.TemporaryDirectory() as temp:
-            old_output, old_history = pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR
+            old_output = pipeline.OUTPUT_DIR
             pipeline.OUTPUT_DIR = Path(temp)
-            pipeline.HISTORY_DIR = Path(temp) / "history"
             try:
                 app = AppTest.from_file(
                     str(Path(__file__).resolve().parents[1] / "app.py")
@@ -91,4 +91,4 @@ class PublicWalkthroughIntegrationTests(unittest.TestCase):
                 self.assertIsNone(app.session_state.diagnosis)
                 self.assertIsNone(app.session_state.training)
             finally:
-                pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR = old_output, old_history
+                pipeline.OUTPUT_DIR = old_output

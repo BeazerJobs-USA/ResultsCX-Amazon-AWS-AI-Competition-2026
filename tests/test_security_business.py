@@ -120,8 +120,7 @@ class UnexpectedModelOutputTests(unittest.TestCase):
         approved = pipeline.build_approved_findings(
             sample_walkthrough.demo_diagnosis(data), {}
         )[:1]
-        with patch.object(pipeline, "save_json", return_value=None):
-            result = pipeline.run_training(FailedSession(), approved, data)
+        result = pipeline.run_training(FailedSession(), approved, data)
         self.assertEqual(result["modules"], [])
         self.assertEqual(len(result["errors"]), 1)
         self.assertIn("timed out", result["errors"][0]["error"])
