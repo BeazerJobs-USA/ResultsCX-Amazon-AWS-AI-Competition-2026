@@ -16,6 +16,7 @@ Run from the repo folder:   python -m unittest tests.test_app_flow -v
 """
 
 import json
+from unittest.mock import patch
 import sys
 import tempfile
 import types
@@ -346,9 +347,8 @@ class AppFlowTests(unittest.TestCase):
         import os
 
         cls.tmp = tempfile.TemporaryDirectory()
-        cls._out, cls._hist = pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR
+        cls._out = pipeline.OUTPUT_DIR
         pipeline.OUTPUT_DIR = Path(cls.tmp.name)
-        pipeline.HISTORY_DIR = Path(cls.tmp.name) / "history"
         # The fake session never uses this ARN, but app.py refuses to start Live mode without a
         # valid-looking one. Force it (not setdefault): a real .env on a teammate's machine may
         # already have set HARNESS_ARN to an unfilled placeholder, which would otherwise leak in here.
@@ -361,7 +361,7 @@ class AppFlowTests(unittest.TestCase):
     def tearDownClass(cls):
         import os
 
-        pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR = cls._out, cls._hist
+        pipeline.OUTPUT_DIR = cls._out
         cls.tmp.cleanup()
         if cls._old_arn is None:
             os.environ.pop("HARNESS_ARN", None)
@@ -398,8 +398,8 @@ class AppFlowTests(unittest.TestCase):
         # ---- run 3: Stage 2 + the supervisor form are on screen ----
         st, outcome = run_app(state)
         self.assertEqual(outcome, "finished")
-        self.assertIn("APPROVE DIAGNOSIS", drawn(st, "button"))
-        self.assertIn("2 · AI diagnosis", drawn(st, "header"))
+        self.assertIn("Save review and prepare selected training", drawn(st, "button"))
+        self.assertIn("2 · Diagnosis draft", drawn(st, "header"))
         self.assertIn("3 · Supervisor review", drawn(st, "header"))
         self.assertIn("IMMEDIATE COMPLIANCE REVIEW NEEDED", drawn(st, "error"))
         self.assertIn("Interactive business impact", drawn(st, "expander"))
@@ -408,7 +408,7 @@ class AppFlowTests(unittest.TestCase):
         # ---- run 4: supervisor edits F1, excludes F2, approves -> training generated automatically ----
         st, outcome = run_app(
             state,
-            clicks={"✅ APPROVE DIAGNOSIS — generate training automatically": True},
+            clicks={"Save review and prepare selected training": True},
             values={
                 "root_F1": "SUPERVISOR EDITED ROOT CAUSE",
                 "rct_F1": "Process Gap",
@@ -444,7 +444,7 @@ class AppFlowTests(unittest.TestCase):
         # ---- run 5: Stage 4 on screen with exports ----
         st, outcome = run_app(state)
         self.assertEqual(outcome, "finished")
-        self.assertIn("4 · Training & hands-on practice", drawn(st, "header"))
+        self.assertIn("4 · Coaching and practice", drawn(st, "header"))
         self.assertIn("TEST objective", drawn(st, "markdown"))
         self.assertIn("BRANCH", drawn(st, "warning"))
         self.assertIn("Reviewed by **George**", drawn(st, "success"))
@@ -454,19 +454,24 @@ class AppFlowTests(unittest.TestCase):
         self.assertIn("Learning objective", md)
         self.assertIn("Role-play script", md)
         # outputs were saved for replay
-        for name in ("diagnosis", "approval", "training"):
-            self.assertTrue(
-                (pipeline.OUTPUT_DIR / f"latest_{name}.json").exists(), name
-            )
+        saved = pipeline.load_replay(data())
+        self.assertEqual(saved["approval"]["run_id"], saved["run_id"])
+        self.assertEqual(saved["training"]["_meta"]["run_id"], saved["run_id"])
+        self.assertEqual(saved["status"], "complete")
+
+        # A second diagnosis on the same data must not replace this reviewed run.
+        pending = pipeline.run_diagnosis(FakeSession(), data())
+        self.assertNotEqual(pending["_meta"]["run_id"], saved["run_id"])
+        self.assertEqual(pipeline.load_replay(data()), saved)
 
         # ---- replay mode: same flow, zero model calls ----
         FakeSession.prompts = []
         state = SessionState()
         replay = {"Model access": "Replay — last saved run (no AWS)"}
         st, outcome = run_app(state, values=replay)
-        self.assertIn("Load saved diagnosis (replay)", drawn(st, "button"))
+        self.assertIn("Open saved review and training", drawn(st, "button"))
         st, outcome = run_app(
-            state, clicks={"▶ Load saved diagnosis (replay)": True}, values=replay
+            state, clicks={"▶ Open saved review and training": True}, values=replay
         )
         self.assertEqual(outcome, "rerun")
         self.assertEqual(state.diagnosis["summary"], "TEST FIXTURE summary")
@@ -476,7 +481,83 @@ class AppFlowTests(unittest.TestCase):
         self.assertEqual([m["finding_id"] for m in state.training["modules"]], ["F1"])
         st, outcome = run_app(state, values=replay)
         self.assertIn("REPLAY", drawn(st, "info"))
-        self.assertNotIn("APPROVE DIAGNOSIS", drawn(st, "button"))
+        self.assertNotIn("Save review and prepare selected training", drawn(st, "button"))
+
+    def test_replay_publication_is_atomic_and_checks_provenance(self):
+        with tempfile.TemporaryDirectory() as output:
+            with patch.object(pipeline, "OUTPUT_DIR", Path(output)):
+                dataset = data()
+                session = FakeSession()
+                diagnosis = pipeline.run_diagnosis(session, dataset)
+                training = pipeline.run_training(session, [], dataset)
+                approval = {
+                    "approved_by": "Reviewer",
+                    "approved_at": "2026-11-15T12:00:00",
+                    "approved_findings": [],
+                    "changes": [],
+                }
+                target = pipeline.save_replay(diagnosis, approval, training, dataset)
+                original = target.read_bytes()
+
+                with patch.object(Path, "replace", side_effect=OSError("test failure")):
+                    with self.assertRaisesRegex(pipeline.PipelineError, "Could not save"):
+                        pipeline.save_replay(diagnosis, approval, training, dataset)
+                self.assertEqual(target.read_bytes(), original)
+                self.assertEqual(list(Path(output).iterdir()), [target])
+
+                bundle = json.loads(original)
+                bundle["approval"]["run_id"] = "another-run"
+                target.write_text(json.dumps(bundle), encoding="utf-8")
+                with self.assertRaisesRegex(pipeline.PipelineError, "inconsistent"):
+                    pipeline.load_replay(dataset)
+
+    def test_corrupt_replay_leaves_synthetic_walkthrough_available(self):
+        with tempfile.TemporaryDirectory() as output:
+            with patch.object(pipeline, "OUTPUT_DIR", Path(output)):
+                (Path(output) / "latest_run.json").write_text("{", encoding="utf-8")
+                synthetic = {"Model access": "Synthetic walkthrough — no AWS"}
+                st, outcome = run_app(SessionState(), values=synthetic)
+                self.assertEqual(outcome, "finished")
+                self.assertIn("Load synthetic walkthrough", drawn(st, "button"))
+                self.assertNotIn("Max findings", drawn(st, "slider"))
+
+                replay = {"Model access": "Replay — last saved run (no AWS)"}
+                state = SessionState()
+                run_app(state, clicks={"▶ Open saved review and training": True}, values=replay)
+                self.assertIn("could not be read", state.error)
+
+    def test_partial_training_retries_only_the_failed_finding(self):
+        state = SessionState()
+        run_app(state, clicks={"▶ Run AI diagnosis (Stage 2)": True})
+        original_ask = FakeSession.ask
+
+        def fail_second(session, prompt, **kwargs):
+            if prompt.startswith("STAGE 4") and "\nid: F2\n" in prompt:
+                raise harness_client.HarnessError("Test timeout")
+            return original_ask(session, prompt, **kwargs)
+
+        with patch.object(FakeSession, "ask", fail_second):
+            run_app(state, clicks={"Save review and prepare selected training": True},
+                    values={"inc_F1": True, "inc_F2": True})
+        self.assertEqual(pipeline.training_status(state.training), "partial")
+        self.assertEqual(pipeline.load_replay(data())["status"], "partial")
+        first_module = state.training["modules"][0]
+        FakeSession.prompts = []
+        run_app(state, clicks={"Retry failed training modules": True})
+        self.assertEqual(len(FakeSession.prompts), 1)
+        self.assertIn("\nid: F2\n", FakeSession.prompts[0])
+        self.assertIs(state.training["modules"][0], first_module)
+        self.assertEqual(pipeline.load_replay(data())["status"], "complete")
+
+    def test_invalid_quiz_and_empty_branches_are_rejected(self):
+        module = module_fixture("F1")
+        module["knowledge_check"]["correct"] = "C"
+        module["roleplay_script"] = [{"speaker": "BRANCH"}] * 4
+        module["instruction"] = [" "]
+        with self.assertRaisesRegex(
+            pipeline.PipelineError, "instruction, knowledge_check, roleplay_script"
+        ):
+            pipeline.ensure_module_complete(module)
 
     def test_missing_config_is_explained_not_crashed(self):
         import os
@@ -494,22 +575,19 @@ class AppFlowTests(unittest.TestCase):
 
     def test_no_saved_run_replay_is_explained(self):
         with tempfile.TemporaryDirectory() as empty:
-            out, hist = pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR
-            pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR = (
-                Path(empty),
-                Path(empty) / "history",
-            )
+            out = pipeline.OUTPUT_DIR
+            pipeline.OUTPUT_DIR = Path(empty)
             try:
                 state = SessionState()
                 st, outcome = run_app(
                     state,
-                    clicks={"▶ Load saved diagnosis (replay)": True},
+                    clicks={"▶ Open saved review and training": True},
                     values={"Model access": "Replay — last saved run (no AWS)"},
                 )
                 self.assertEqual(outcome, "rerun")
                 self.assertIn("No saved run", state.error)
             finally:
-                pipeline.OUTPUT_DIR, pipeline.HISTORY_DIR = out, hist
+                pipeline.OUTPUT_DIR = out
 
     def test_synthetic_walkthrough_uses_no_model_calls(self):
         FakeSession.prompts = []
@@ -527,7 +605,7 @@ class AppFlowTests(unittest.TestCase):
         )
         st, outcome = run_app(
             state,
-            clicks={"✅ APPROVE DIAGNOSIS — generate training automatically": True},
+            clicks={"Save review and prepare selected training": True},
             values=mode,
         )
         self.assertEqual(outcome, "rerun")

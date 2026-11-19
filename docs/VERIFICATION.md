@@ -12,7 +12,7 @@ python main.py --dry-run
 python -m streamlit run app.py
 ```
 
-The local suite has **50 passing tests**. Tests exercise actual Streamlit script state changes with `streamlit.testing.v1.AppTest`, together with plain-Python unit tests and fake Bedrock stream events.
+The offline suite includes regression cases for same-dataset replay isolation, corrupt saved JSON, failed-module retries, and malformed coaching content. Tests exercise actual Streamlit script state changes with `streamlit.testing.v1.AppTest`, together with plain-Python unit tests and fake Bedrock stream events.
 
 | Feature | Checked locally | Still needed |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ The local suite has **50 passing tests**. Tests exercise actual Streamlit script
 | Synthetic diagnosis, supervisor edits, approval and exclusions | Yes; app progression and handoff tested | Human assessment of the recommendation's accuracy |
 | Synthetic coaching modules, quiz, scenario, scripted roleplay | Yes; module structure and alignment tests | Actual employee practice and learning-outcome validation |
 | Markdown and JSON export content | Checked in the app-flow test harness | Browser download behavior on a user's machine |
-| Saved replay | Yes; simulated saved-run tests | A completed authorized live run to create the saved artifacts |
+| Saved replay | Yes; simulated runs cover shared identity, interrupted review, corrupt files, and partial training | A completed authorized Live review against the actual harness |
 | Live Bedrock invocation and generated content | SDK request shape, tool rounds, malformed streams and timeouts tested with fakes | **Real AWS credentials, permitted harness, and end-to-end live test** |
 
 ## Reliability improvements

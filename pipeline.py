@@ -1,12 +1,12 @@
 """
-pipeline.py — the six-step flow from the case study, as plain Python functions.
+Pipeline for the four-stage QA review and coaching workflow.
 
     1 Data Intake         get_data.get_all_data()               (Python, offline)
     2 Needs Analysis      run_diagnosis()                       (Bedrock call #1)  -> validate_diagnosis()
     3 Human Validation    the supervisor edits/approves in app.py (no AI)
     4 Training Design     run_training()                        (Bedrock call per approved finding)
-    5 Alignment Check     alignment_check()                     (Python, deterministic)
-    6 Outcome Evaluation  not in scope for the prototype (re-run stage 1 on post-training exports)
+      Alignment Check     alignment_check()                     (Python, deterministic)
+      Outcome Evaluation  not in scope for the prototype (re-run stage 1 on post-training exports)
 
 Synthetic AI results can be saved under outputs/ for offline replay. Private
 results require explicit opt-in because those JSON files are not encrypted.
@@ -16,6 +16,8 @@ import json
 import hashlib
 import os
 import re
+import tempfile
+from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 
@@ -26,7 +28,6 @@ from harness_client import HarnessError
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "outputs"
-HISTORY_DIR = OUTPUT_DIR / "history"
 
 ROOT_CAUSE_TYPES = ["Knowledge Gap", "Skill Gap", "Process Gap", "Will Gap"]
 INTERVENTIONS = ["simulation", "eLearning/ILT", "coaching", "escalate to operations"]
@@ -86,26 +87,95 @@ def _pick(value, allowed, default):
     return default
 
 
-def save_json(name, obj, source_kind="synthetic"):
-    if (
-        source_kind == "private"
-        and os.environ.get("ALLOW_PRIVATE_OUTPUT_STORAGE") != "1"
-    ):
-        return None
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    HISTORY_DIR.mkdir(exist_ok=True)
-    latest = OUTPUT_DIR / f"latest_{name}.json"
-    stamped = HISTORY_DIR / f"{datetime.now():%Y%m%d_%H%M%S}_{name}.json"
-    for p in (latest, stamped):
-        p.write_text(json.dumps(obj, indent=2, default=str), encoding="utf-8")
-    return latest
+def training_status(training):
+    if not training["approved_findings"]:
+        return "no_training"
+    if not training["errors"]:
+        return "complete"
+    return "partial" if training["modules"] else "failed"
 
 
-def load_json(name):
-    p = OUTPUT_DIR / f"latest_{name}.json"
-    if not p.exists():
+def save_replay(diagnosis, approval, training, data):
+    """Publish one reviewed run using a same-directory atomic replacement."""
+    if data["source_kind"] == "private" and os.environ.get("ALLOW_PRIVATE_OUTPUT_STORAGE") != "1":
         return None
-    return json.loads(p.read_text(encoding="utf-8"))
+    status = training_status(training)
+    if status == "failed":
+        return None
+
+    run_id = diagnosis["_meta"]["run_id"]
+    bundle = {
+        "run_id": run_id,
+        "status": status,
+        "diagnosis": diagnosis,
+        "approval": {**approval, "run_id": run_id},
+        "training": {
+            **training,
+            "_meta": {**training["_meta"], "run_id": run_id},
+        },
+    }
+    staged = None
+    try:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=OUTPUT_DIR, delete=False
+        ) as file:
+            staged = Path(file.name)
+            json.dump(bundle, file, indent=2, default=str)
+        target = OUTPUT_DIR / "latest_run.json"
+        staged.replace(target)
+        return target
+    except OSError as exc:
+        raise PipelineError("Could not save the reviewed run. Check the outputs folder.") from exc
+    finally:
+        if staged is not None:
+            staged.unlink(missing_ok=True)
+
+
+def load_replay(data):
+    target = OUTPUT_DIR / "latest_run.json"
+    try:
+        bundle = json.loads(target.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        if any(OUTPUT_DIR.glob("latest_*.json")):
+            raise PipelineError("Older outputs cannot be matched to one review. Complete a new Live review to enable replay.") from None
+        raise PipelineError("No saved run. Complete a review in Live mode to enable replay.") from None
+    except (OSError, ValueError) as exc:
+        raise PipelineError("The saved run could not be read. Complete a new Live review to replace it.") from exc
+
+    try:
+        run_id = bundle["run_id"]
+        diagnosis, approval, training = (bundle[key] for key in ("diagnosis", "approval", "training"))
+        if not isinstance(run_id, str) or not run_id or (
+            diagnosis["_meta"]["run_id"], approval["run_id"], training["_meta"]["run_id"]
+        ) != (run_id, run_id, run_id):
+            raise ValueError
+        selected = [finding["id"] for finding in training["approved_findings"]]
+        diagnosed = {finding["id"] for finding in diagnosis["findings"]}
+        produced = [item["finding_id"] for item in training["modules"] + training["errors"]]
+        if (
+            not isinstance(approval["approved_by"], str)
+            or not isinstance(approval["approved_at"], str)
+            or not isinstance(approval["changes"], list)
+            or selected != approval["approved_findings"]
+            or not set(selected).issubset(diagnosed)
+            or len(produced) != len(selected)
+            or len(set(produced)) != len(produced)
+            or set(produced) != set(selected)
+            or bundle["status"] != training_status(training)
+            or bundle["status"] == "failed"
+        ):
+            raise ValueError
+        fingerprint = data_fingerprint(data)
+        if any(
+            item["_meta"]["data_fingerprint"] != fingerprint
+            or item["_meta"]["source_kind"] != data["source_kind"]
+            for item in (diagnosis, training)
+        ):
+            raise PipelineError("The saved run does not match the loaded QA dataset.")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PipelineError("The saved run has inconsistent review or training records. Complete a new Live review.") from exc
+    return bundle
 
 
 def ensure_cloud_upload_authorized(data):
@@ -288,7 +358,7 @@ def validate_diagnosis(diagnosis, data):
 
 
 def run_diagnosis(session, data, max_findings=5, on_text=None):
-    """Bedrock call #1. Returns the validated diagnosis dict (also saved to outputs/)."""
+    """Bedrock call #1. Returns a validated diagnosis with a unique run ID."""
     ensure_cloud_upload_authorized(data)
     payload = build_safe_model_payload(data)
     prompt = sanitize_model_prompt(
@@ -299,6 +369,7 @@ def run_diagnosis(session, data, max_findings=5, on_text=None):
     )
     diagnosis = validate_diagnosis(extract_json(text), data)
     diagnosis["_meta"] = {
+        "run_id": uuid4().hex,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "session_id": session.session_id,
         "input_tokens": turn.input_tokens,
@@ -310,7 +381,6 @@ def run_diagnosis(session, data, max_findings=5, on_text=None):
         "source_kind": data.get("source_kind", "synthetic"),
         "data_fingerprint": data_fingerprint(data),
     }
-    save_json("diagnosis", diagnosis, source_kind=data.get("source_kind", "synthetic"))
     return diagnosis
 
 
@@ -390,32 +460,71 @@ def evidence_lines_for(finding, data, max_items=8):
     return "\n".join(lines[:max_items])
 
 
+def nonblank_text(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def nonblank_list(value):
+    return isinstance(value, list) and bool(value) and all(map(nonblank_text, value))
+
+
 def ensure_module_complete(module):
-    """Reject structurally incomplete model output before presenting it as usable training."""
-    missing = []
-    for key in ("module_title", "learning_objective", "why_this_fixes_the_gap", "delivery"):
-        if not str(module.get(key) or "").strip():
-            missing.append(key)
-    if not module.get("instruction"):
+    """Reject incomplete quiz, exercise, scenario, and roleplay content."""
+    missing = [
+        key
+        for key in ("module_title", "learning_objective", "why_this_fixes_the_gap", "delivery")
+        if not nonblank_text(module.get(key))
+    ]
+    if not nonblank_list(module.get("instruction")):
         missing.append("instruction")
-    quiz = module.get("knowledge_check") or {}
+
+    quiz = module["knowledge_check"]
     options = quiz.get("options")
-    if not (quiz.get("question") and isinstance(options, list) and len(options) >= 2
-            and all(isinstance(option, str) and option.strip() for option in options)
-            and quiz.get("correct") and quiz.get("feedback")):
+    answer = quiz.get("correct")
+    if not (
+        nonblank_text(quiz.get("question"))
+        and nonblank_text(quiz.get("feedback"))
+        and nonblank_list(options)
+        and len(options) >= 2
+        and nonblank_text(answer)
+        and sum(
+            answer.strip().casefold() == option.strip().casefold()
+            or bool(re.match(r"^" + re.escape(answer.strip()) + r"[).:\-]\s+\S", option.strip(), re.I))
+            for option in options
+        ) == 1
+    ):
         missing.append("knowledge_check")
-    exercise = module.get("hands_on_exercise") or {}
-    if not (exercise.get("trainee_instructions") and exercise.get("facilitator_instructions")
-            and isinstance(exercise.get("success_criteria"), list)
-            and exercise["success_criteria"]):
+
+    exercise = module["hands_on_exercise"]
+    if not (
+        nonblank_text(exercise.get("trainee_instructions"))
+        and nonblank_text(exercise.get("facilitator_instructions"))
+        and nonblank_list(exercise.get("success_criteria"))
+    ):
         missing.append("hands_on_exercise")
-    scenario = module.get("simulation_scenario") or {}
-    if not (scenario.get("behavioral_target") and scenario.get("scenario_context")
-            and isinstance(scenario.get("scoring_criteria"), list)
-            and scenario["scoring_criteria"]):
+    scenario = module["simulation_scenario"]
+    if not (
+        nonblank_text(scenario.get("behavioral_target"))
+        and nonblank_text(scenario.get("scenario_context"))
+        and nonblank_list(scenario.get("scoring_criteria"))
+    ):
         missing.append("simulation_scenario")
-    roleplay = module.get("roleplay_script") or []
-    if len(roleplay) < 4 or not any(t.get("speaker", "").upper() == "BRANCH" for t in roleplay):
+
+    roleplay = module["roleplay_script"]
+    dialogue = [turn for turn in roleplay if turn["speaker"] in {"AGENT", "MEMBER"}]
+    branches = [turn for turn in roleplay if turn["speaker"] == "BRANCH"]
+    if not (
+        len(roleplay) >= 4
+        and len(dialogue) + len(branches) == len(roleplay)
+        and {turn["speaker"] for turn in dialogue} == {"AGENT", "MEMBER"}
+        and all(nonblank_text(turn.get("line")) for turn in dialogue)
+        and branches
+        and all(
+            nonblank_text(turn.get("if_agent_demonstrates_behavior"))
+            and nonblank_text(turn.get("if_agent_does_not"))
+            for turn in branches
+        )
+    ):
         missing.append("roleplay_script")
     if missing:
         raise PipelineError("Incomplete training module: " + ", ".join(missing))
@@ -484,11 +593,10 @@ def validate_module(module, finding, data=None):
         "why_this_fixes_the_gap",
         "delivery",
     ):
-        module[key] = str(module.get(key) or "")
+        module[key] = module.get(key) if isinstance(module.get(key), str) else ""
     for key in ("instruction", "existing_material_to_reuse", "roleplay_script"):
         if not isinstance(module.get(key), list):
             module[key] = []
-    module["instruction"] = [str(item) for item in module["instruction"]]
     module["existing_material_to_reuse"] = [
         str(item) for item in module["existing_material_to_reuse"]
     ]
@@ -502,20 +610,13 @@ def validate_module(module, finding, data=None):
     for key in ("knowledge_check", "hands_on_exercise", "simulation_scenario"):
         if not isinstance(module.get(key), dict):
             module[key] = {}
-    sc = module["simulation_scenario"]
-    if not isinstance(sc.get("scoring_criteria"), list):
-        sc["scoring_criteria"] = (
-            [str(sc.get("scoring_criteria") or "")]
-            if sc.get("scoring_criteria")
-            else []
-        )
     if data is not None:
         verify_module_citations(module, finding, data)
     return module
 
 
 def run_training(session, approved_findings, data, on_progress=None, on_text=None):
-    """Bedrock call per approved finding. Returns {"modules": [...], "errors": [...]} and saves it.
+    """Bedrock call per approved finding. Returns {"modules": [...], "errors": [...]} without publishing a replay.
 
     A failed module is recorded without discarding other completed modules.
     """
@@ -565,12 +666,11 @@ def run_training(session, approved_findings, data, on_progress=None, on_text=Non
             "data_fingerprint": data_fingerprint(data),
         },
     }
-    save_json("training", result, source_kind=data.get("source_kind", "synthetic"))
     return result
 
 
 # ======================================================================================
-# STAGE 5 - Alignment check (deterministic)
+# STAGE 4 - Alignment check (deterministic)
 # ======================================================================================
 def alignment_check(approved_findings, modules):
     """One row per module: does it point at an approved finding, and does its behavioral target

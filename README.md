@@ -2,37 +2,17 @@
 
 ### Agent QA Review | From a QA finding to targeted coaching and practice
 
-**A failed QA item should lead to more than another score on a report.** Imagine a customer-service employee who discusses a member's plan update before completing the required identity-verification steps. An evaluator records the missed behavior, but a supervisor still has to interpret the evidence, decide what needs correcting, and prepare a useful coaching conversation. Repeat that process across employees and recurring QA issues, and the work between *finding a mistake* and *helping someone correct it* becomes a challenge of its own.
+**Agent QA Review** turns scored contact-center QA findings into supervisor-reviewed coaching and practice. The public Streamlit walkthrough runs on invented QA records and handwritten example outputs. Optional live mode uses an authorized Amazon Bedrock AgentCore harness.
 
-Our team built **Agent QA Review** to connect those steps. Python measures which scored behaviors are being missed and links the results to evaluator comments. Amazon Bedrock AgentCore can turn that evidence into a proposed explanation and intervention. A supervisor checks and edits the finding before the application prepares a focused coaching package: a learning objective, teaching points, a knowledge check, a guided exercise, a fictional customer scenario, and a branching roleplay script with coach notes.
+[Run the synthetic walkthrough](docs/SETUP.md) · [Explore the architecture](docs/ARCHITECTURE.md) · [Review the privacy limits](docs/SECURITY.md) · [Check offline verification](docs/VERIFICATION.md)
 
-**The value is the handoff:** one reviewed QA problem can travel from evidence to a specific practice activity without a supervisor having to assemble every training element from scratch. That lets the supervisor focus on deciding what the evidence means, checking the recommendation, and coaching the employee rather than starting each lesson plan from a blank page.
-
-**At a glance:** Four-stage Streamlit workflow · AWS AgentCore `InvokeHarness` integration · Python-verified evidence citations · supervisor review and compliance flags · tailored coaching and branching scripts · pre-model personal-data masking · interactive business impact calculator · **50 passing offline tests**. [Explore the architecture](docs/ARCHITECTURE.md) · [Run the synthetic walkthrough](docs/SETUP.md) · [Review the privacy limits](docs/SECURITY.md) · [Verification report](docs/VERIFICATION.md).
-
-[![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg)
-
-*From scored QA evidence to a supervisor-reviewed coaching plan. [Open the full-size workflow](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg).*
+[![Four-stage Agent QA Review workflow](docs/architecture-flow.svg)](docs/architecture-flow.svg)
 
 I'm **George Beazer**, a senior cybersecurity student at **Kennesaw State University**. On September 17 and 18, 2026, I competed with teammates Kevin, Jackendy, Kylee, Jack, and Nelson in the ResultsCX and AWS AI College Competition.
 
 This repository presents the competition application, the product idea behind it, the code I contributed to and later refined, and a public walkthrough that can be reviewed without ResultsCX data.
 
-## The story in 90 seconds
-
-Consider a customer-service representative who discusses a healthcare member's account before completing identity verification. The QA score captures the missed control, but a score alone doesn't teach the employee how to handle the next call. A supervisor still needs to examine the comments, determine what went wrong, and build a focused lesson and practice conversation.
-
-**Agent QA Review closes that gap.** Python calculates QA patterns; an added privacy checkpoint masks recognizable personal identifiers before prompts or tool responses reach Bedrock. The AI drafts an evidence-linked diagnosis, but the supervisor checks it, changes the recommendation when necessary, and chooses what to coach. Failed identity/privacy controls also appear as **immediate review flags** independent of the AI's answer. Once a finding is approved, the workflow creates a coaching objective, a quiz, a guided exercise, and a branching practice script.
-
-The last question is business impact: *how much supervisor preparation time could that save?* An interactive calculator lets the operator change weekly volume, manual time, AI-assisted time **including review**, labor cost, and working weeks. For example, **40 packages/week at 30 vs. 18 minutes** could free **8 supervisor hours/week**, or **400 hours/year**, valued at **$18,000/year** using a hypothetical $45/hour loaded rate. These are scenario assumptions—not observed savings, avoided fines, or a claim of reduced HIPAA incidents.
-
-The product idea is simple: **identify a missed behavior, protect the data, escalate sensitive failures, let a human decide, and turn the decision into useful practice—with a transparent estimate of its possible value.**
-
-## The core idea
-
-> **Find the missed behavior. Check the evidence. Let a supervisor make the call. Turn the approved finding into focused coaching and practice.**
-
-### One missed verification step, one focused coaching plan
+## The walkthrough in 90 seconds
 
 The public demonstration includes an **invented** compliance evaluation in which an employee discusses a plan update before finishing verification. Here is how that kind of finding moves through the workflow:
 
@@ -41,7 +21,7 @@ The public demonstration includes an **invented** compliance evaluation in which
 3. **Put the supervisor in control.** The supervisor sees the observed evidence separately from the AI interpretation, can change the proposed cause and intervention, and chooses which findings actually warrant training.
 4. **Build the practice.** For selected findings, the training workflow prepares an objective, instructions, a knowledge-check question with suggested answer and feedback, facilitator-guided practice, an imaginary member situation, scoring criteria, and a scripted conversation with alternative member reactions. The supervisor can use these materials in a coaching session.
 
-The public synthetic walkthrough shows handwritten fictional outputs for this process. Bedrock generation is a separate live mode requiring an authorized AWS harness; neither the example nor its figures represent real ResultsCX employee performance.
+To follow the case locally, open **Synthetic walkthrough**, select **Load synthetic walkthrough**, and choose **Save review and prepare selected training** after checking the findings. After the review, open **Knowledge check** or **Role-play script**. The sample is fictional, and the business calculator uses editable scenario assumptions.
 
 ## The problem we wanted to improve
 
@@ -125,14 +105,14 @@ The project therefore demonstrates the workflow that could create value, togethe
 
 I used Streamlit to connect four parts of the process. The dashboard lets supervisors move from QA findings to a specific coaching decision, while the AI handles the diagnosis draft and the training content for selected findings.
 
-The [full-size architecture diagram](https://raw.githubusercontent.com/BeazerJobs-USA/ResultsCX-Amazon-AWS-AI-Competition-2026/main/docs/architecture-flow.svg) above illustrates how each stage passes the reviewed finding to the next. The SVG stays sharp when zoomed in.
+The [full-size architecture diagram](docs/architecture-flow.svg) above illustrates how each stage passes the reviewed finding to the next. The SVG stays sharp when zoomed in.
 
 | Stage | What happens |
 | --- | --- |
-| **1. QA intake** | I load scored evaluations, keep the evidence tied to record IDs, and calculate behavior-level defect rates in Python. The first screen also provides an interactive labor-hours calculator. The public walkthrough uses invented records. |
-| **2. AI diagnosis** | A second sanitization checkpoint scrubs recognizable personal identifiers from the AI payload and final prompt before Bedrock can receive them; the tool callback uses the same safe payload. Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks citations against loaded records. |
-| **3. Supervisor review** | Python rules immediately flag **every failed Compliance QA item** for human review, with higher priority for identity/privacy keyword matches, regardless of the model's conclusion. A supervisor can adjust the root cause and intervention, add notes, and include or exclude findings. The alert is in-app only; no external task is dispatched. |
-| **4. Coaching and practice** | Selected findings become targeted instruction, a behavior-specific knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment, including whether the quiz references the target behavior, and can save results for read-only replay. |
+| **1. QA intake** | Load scored evaluations, tie evidence to record IDs, and calculate behavior-level defect rates. Python flags every failed Compliance item at intake and prioritizes identity or privacy matches. The public walkthrough uses invented records and includes an optional labor-hours calculator. |
+| **2. Diagnosis draft** | A second sanitization checkpoint scrubs recognizable personal identifiers from the AI payload and final prompt before Bedrock can receive them; the tool callback uses the same safe payload. Bedrock proposes the observed problem, a possible root cause, confidence, and an intervention. Python checks citations against loaded records. |
+| **3. Supervisor review** | The supervisor reviews the flagged records and can change the proposed cause and intervention, add notes, and choose which findings need training. A review can also be recorded with no training selected. Compliance alerts are on screen. |
+| **4. Coaching and practice** | Selected findings become targeted instruction, a behavior-specific knowledge check with answer and feedback, a guided exercise with scoring criteria, a fictional customer scenario, and an agent/member roleplay script with branches. The app checks structural alignment, including whether the quiz references the target behavior, and can save the reviewed result as one bundle for read-only replay. |
 
 The knowledge check displays questions and suggested answers; it does not grade a trainee's responses. The roleplay is a **generated practice script**, not a live customer conversation or an autonomous customer-facing agent. The AI workflow uses one AgentCore harness session with separate prompts for diagnosis and training. Compliance flags are rule-based **potential risks**, not verified incidents or declarations of legal violations.
 
@@ -196,7 +176,7 @@ I worked with the team; I did not write every part of the application by myself.
 | --- | --- | --- |
 | **Synthetic walkthrough** (default) | Runs the dashboard with nine invented QA line items and handwritten diagnosis/training examples | No |
 | **Live Bedrock** | Uses `boto3` and AgentCore `InvokeHarness` to generate an analysis and coaching modules | Yes, an authorized harness and credentials |
-| **Saved-run replay** | Reopens a completed diagnosis and training package with its original recorded approval, without collecting a new approval | No live AWS call, but a completed saved run must already exist |
+| **Saved-run replay** | Reopens a saved review and its training outcome together, including partial training or a review with no training selected | No live AWS call, but a completed saved run must already exist |
 
 The synthetic walkthrough is deliberately **not** presented as AI output, an actual ResultsCX evaluation, or measured business performance.
 
@@ -247,7 +227,7 @@ I run the offline tests with:
 python -m unittest discover -s tests -v
 ```
 
-**50 offline tests pass** in a fresh Python 3.12 environment using `requirements.lock`. They cover synthetic record calculations, stream parsing, interrupted AWS streams, bounded tool-use rounds, the Boto3 request shape, supervisor-to-training flow, real Streamlit script progression and calculator input changes, replay behavior, citation checks including sanitized quotes, behavior-matched quiz examples, malformed model output, private-data guards, identifier masking, compliance-alert rules, and business-math scenarios. They do **not** invoke AWS. Local-only structure checks on separately provided workbooks were also performed without including those files in the repository. The live harness and end-user browser behavior require separate authorized/environment testing. See [Verification](docs/VERIFICATION.md).
+The offline suite runs in Python 3.12 using `requirements.lock`. [GitHub Actions runs](../../actions/workflows/offline-tests.yml) and [verification notes](docs/VERIFICATION.md) document the checks. They cover synthetic record calculations, stream parsing, interrupted AWS streams, bounded tool-use rounds, the Boto3 request shape, supervisor-to-training flow, real Streamlit script progression and calculator input changes, replay behavior, citation checks including sanitized quotes, behavior-matched quiz examples, malformed model output, private-data guards, identifier masking, compliance-alert rules, and business-math scenarios. They do **not** invoke AWS. Local-only structure checks on separately provided workbooks were also performed without including those files in the repository. The live harness and end-user browser behavior require separate authorized/environment testing. See [Verification](docs/VERIFICATION.md).
 
 The dashboard examples use invented cases. No post-training QA comparison has been supplied, so I don't claim an actual reduction in defects or real labor savings. This is a student competition project, not a deployed ResultsCX system.
 
@@ -267,7 +247,8 @@ Those are the competition's rubric weights, **not our awarded scores**. I have n
 ## Repository map
 
 ```text
-app.py                     Streamlit dashboard
+app.py                     Streamlit dashboard and review flow
+training_export.py         Markdown export for a reviewed run
 main.py                    Terminal check and live runner
 get_data.py                Synthetic/private data loading and deterministic metrics
 security_controls.py       Pre-model identifier masking and compliance alert rules

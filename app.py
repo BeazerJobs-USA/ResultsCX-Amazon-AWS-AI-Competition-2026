@@ -15,6 +15,7 @@ import pipeline
 import sample_walkthrough
 import security_controls
 from business_impact import calculate_business_impact
+from training_export import training_markdown
 from harness_client import HarnessError, HarnessSession, get_config
 
 # ======================================================================================
@@ -25,10 +26,10 @@ st.set_page_config(
 )
 
 STAGES = [
-    "1 · QA data",
-    "2 · AI diagnosis",
+    "1 · QA intake",
+    "2 · Diagnosis draft",
     "3 · Supervisor review",
-    "4 · Training & practice",
+    "4 · Coaching and practice",
 ]
 DEFAULTS = {
     "data": None,  # Stage 1 result (dict from get_data.get_all_data)
@@ -37,7 +38,7 @@ DEFAULTS = {
     "training": None,  # Stage 4 result
     "session": None,  # HarnessSession (one runtimeSessionId for the whole pipeline)
     "error": None,  # last error text (shown at the top)
-    "run_started": None,
+    "save_error": None,
 }
 for key, value in DEFAULTS.items():
     st.session_state.setdefault(key, value)
@@ -63,6 +64,46 @@ def show_error(title, err):
     st.session_state.error = f"{title}\n\n{err}"
 
 
+def generate_training(diagnosis, approval, approved, data, previous=None):
+    session = st.session_state.session
+    if session is None:
+        session = HarnessSession(
+            tools={"get_all_data": lambda **kw: pipeline.build_safe_model_payload(data)}
+        )
+        st.session_state.session = session
+
+    with st.status(f"Preparing {len(approved)} training module(s)…", expanded=True) as status:
+        result = pipeline.run_training(
+            session,
+            approved,
+            data,
+            on_progress=lambda i, n, finding: st.write(f"Module {i}/{n}: {finding['title']}"),
+        )
+        if previous is not None:
+            completed = {module["finding_id"]: module for module in previous["modules"] + result["modules"]}
+            result["approved_findings"] = previous["approved_findings"]
+            result["modules"] = [
+                completed[finding["id"]]
+                for finding in result["approved_findings"]
+                if finding["id"] in completed
+            ]
+            result["alignment"] = pipeline.alignment_check(result["approved_findings"], result["modules"])
+
+        failed = len(result["errors"])
+        status.update(
+            label=f"Training: {len(result['modules'])} ready, {failed} failed",
+            state="error" if failed else "complete",
+            expanded=False,
+        )
+
+    st.session_state.save_error = None
+    try:
+        pipeline.save_replay(diagnosis, approval, result, data)
+    except pipeline.PipelineError as exc:
+        st.session_state.save_error = str(exc)
+    return result
+
+
 # ======================================================================================
 # Sidebar: mode, configuration status, controls
 # ======================================================================================
@@ -83,11 +124,12 @@ with st.sidebar:
     if st.session_state.get("_last_mode") != mode:
         reset_run()
         st.session_state["_last_mode"] = mode
-    max_findings = st.slider("Max findings to diagnose", 3, 6, 5)
 
     st.subheader("Configuration")
     cfg = None
     if live:
+        if st.session_state.diagnosis is None:
+            max_findings = st.slider("Max findings to diagnose", 3, 6, 5)
         try:
             cfg = get_config()
             st.success(f"AWS runtime configured (region: {cfg['region']})")
@@ -98,14 +140,6 @@ with st.sidebar:
             st.caption(
                 "Configure an approved AWS profile and runtime, or use the synthetic walkthrough."
             )
-
-    saved = pipeline.load_json("diagnosis")
-    if saved:
-        st.caption(
-            f"Saved run available for replay: {saved.get('_meta', {}).get('generated_at', '?')}"
-        )
-    else:
-        st.caption("No saved run yet (run once in Live mode to create one).")
 
     sess = st.session_state.session
     if sess:
@@ -137,6 +171,16 @@ cols = st.columns(len(STAGES))
 for i, (col, name) in enumerate(zip(cols, STAGES, strict=True)):
     if i < stage_now:
         col.success(f"✅ {name}")
+    elif i == stage_now and st.session_state.training is not None:
+        outcome = pipeline.training_status(st.session_state.training)
+        label = {
+            "complete": "Complete",
+            "partial": "Partial",
+            "failed": "Failed",
+            "no_training": "No training selected",
+        }[outcome]
+        render = col.warning if outcome in {"partial", "failed"} else col.success
+        render(f"{name} · {label}")
     elif i == stage_now:
         col.info(f"▶ {name}")
     else:
@@ -156,7 +200,7 @@ st.divider()
 # ======================================================================================
 # STAGE 1 — QA data (always shown)
 # ======================================================================================
-st.header("1 · QA data (Data Intake)")
+st.header("1 · QA intake")
 
 if st.session_state.data is None:
     try:
@@ -184,6 +228,21 @@ st.caption(
 st.caption(
     "An agent-date group is not necessarily one unique call. Defect rates are per scored line item."
 )
+
+urgent_items = security_controls.critical_compliance_alerts(data)
+if urgent_items:
+    urgent_count = sum(
+        item["priority"].startswith("Urgent") for item in urgent_items
+    )
+    # Deterministic alert: visible at intake, before diagnosis.
+    # It does not contact anyone outside the app or declare a HIPAA violation.
+    alert_message = (
+        f"IMMEDIATE COMPLIANCE REVIEW NEEDED: {len(urgent_items)} failed compliance "
+        f"QA item(s), including {urgent_count} matching identity/privacy keywords. "
+        "Check the source records and follow your organization's escalation policy. "
+        "Review details appear in Stage 3."
+    )
+    (st.error if urgent_count else st.warning)(alert_message)
 
 with st.expander("Privacy and data-quality checks"):
     c1, c2 = st.columns(2)
@@ -217,7 +276,7 @@ with st.expander("Privacy and data-quality checks"):
 
 # Show the potential business value from the FIRST screen of a short demo.
 # Every number is editable; nothing is presented as a real measured saving.
-with st.expander("📊 Interactive business impact · supervisor preparation time", expanded=True):
+with st.expander("📊 Interactive business impact · supervisor preparation time", expanded=False):
     st.markdown(
         "**Business problem:** A QA score identifies a missed behavior, but a supervisor "
         "still has to turn it into a useful lesson, quiz, and practice scenario. "
@@ -338,16 +397,15 @@ if st.session_state.diagnosis is None:
         if live
         else "▶ Load synthetic walkthrough"
         if sample_mode
-        else "▶ Load saved diagnosis (replay)"
+        else "▶ Open saved review and training"
     )
     if st.button(label, type="primary", width="stretch"):
         st.session_state.error = None
-        st.session_state.run_started = datetime.now()
         try:
             if live:
                 if cfg is None:
                     raise HarnessError(
-                        "HARNESS_ARN is not configured — see the sidebar. Fix .env and reload, or switch to Replay."
+                        "HARNESS_ARN is not configured — see the sidebar. Fix .env and reload, or use the synthetic walkthrough."
                     )
                 session = HarnessSession(
                     tools={
@@ -378,45 +436,17 @@ if st.session_state.diagnosis is None:
                     )
                     status.update(
                         label=f"Stage 2 complete · {len(diag['findings'])} findings, "
-                        f"{sum(f['evidence_verified'] for f in diag['findings'])} citations verified",
+                        f"{sum(f['evidence_verified'] for f in diag['findings'])} evidence citations matched",
                         state="complete",
                         expanded=False,
                     )
             elif sample_mode:
                 diag = sample_walkthrough.demo_diagnosis(data)
             else:
-                diag = pipeline.load_json("diagnosis")
-                if not diag:
-                    raise pipeline.PipelineError(
-                        "No saved run to replay.\nFix: switch to Live mode and run the diagnosis once; "
-                        "every successful run is saved under outputs/ automatically."
-                    )
-                if diag.get("_meta", {}).get(
-                    "data_fingerprint"
-                ) != pipeline.data_fingerprint(data):
-                    raise pipeline.PipelineError(
-                        "The saved diagnosis does not match the loaded QA dataset. "
-                        "Use the matching source or start a new analysis."
-                    )
-                replay_training = pipeline.load_json("training")
-                if not replay_training:
-                    raise pipeline.PipelineError(
-                        "The saved diagnosis has no completed training package to replay. "
-                        "Run the full approved flow in Live mode to create one."
-                    )
-                if replay_training.get("_meta", {}).get(
-                    "data_fingerprint"
-                ) != pipeline.data_fingerprint(data):
-                    raise pipeline.PipelineError(
-                        "The saved training was created from a different QA dataset."
-                    )
-                # Replay historical artifacts together. Never attribute old training
-                # to a new reviewer or to edits that were not used to generate it.
-                st.session_state.training = replay_training
-                st.session_state.approval = pipeline.load_json("approval")
-                st.info(
-                    f"REPLAY — showing the saved diagnosis generated {diag.get('_meta', {}).get('generated_at', '?')}"
-                )
+                bundle = pipeline.load_replay(data)
+                diag = bundle["diagnosis"]
+                st.session_state.training = bundle["training"]
+                st.session_state.approval = bundle["approval"]
             st.session_state.diagnosis = diag
             st.rerun()
         except (HarnessError, pipeline.PipelineError, get_data.DataError) as e:
@@ -428,7 +458,7 @@ if st.session_state.diagnosis is None:
 # ======================================================================================
 diag = st.session_state.diagnosis
 if diag:
-    st.header("2 · AI diagnosis (Needs Analysis)")
+    st.header("2 · Diagnosis draft")
     meta = diag.get("_meta", {})
     if not live and not sample_mode:
         st.info(
@@ -517,21 +547,8 @@ if diag:
     # STAGE 3 — Supervisor review and approval (the human checkpoint)
     # ==================================================================================
     st.divider()
-    st.header("3 · Supervisor review (Human Validation)")
-    urgent_items = security_controls.critical_compliance_alerts(data)
+    st.header("3 · Supervisor review")
     if urgent_items:
-        urgent_count = sum(
-            item["priority"].startswith("Urgent") for item in urgent_items
-        )
-        # Deterministic alert: visible as soon as Stage 3 loads, before approval.
-        # It does not contact anyone outside the app or declare a HIPAA violation.
-        alert_message = (
-            f"IMMEDIATE COMPLIANCE REVIEW NEEDED: {len(urgent_items)} failed compliance "
-            f"QA item(s), including {urgent_count} matching identity/privacy keywords. "
-            "Check the source records and follow your organization's escalation policy. "
-            "The flags do not depend on the AI diagnosis."
-        )
-        (st.error if urgent_count else st.warning)(alert_message)
         st.dataframe(
             pd.DataFrame(
                 [
@@ -555,11 +572,11 @@ if diag:
             "external notification, or substitute for the supervisor's judgment."
         )
     else:
-        st.success("No failed identity/privacy compliance items matched the current alert rules.")
-    if st.session_state.training is None:
+        st.success("No failed Compliance QA items in the loaded data.")
+    if st.session_state.training is None and (live or sample_mode):
         st.markdown(
             "Correct anything the AI got wrong, untick findings that should not become training, then approve. "
-            "**Approval starts training generation automatically — no further prompt is needed.**"
+            "Submitting records your decision and prepares training for the selected findings."
         )
         with st.form("supervisor_review"):
             supervisor = st.text_input(
@@ -619,7 +636,7 @@ if diag:
                 }
                 st.markdown("---")
             approved_clicked = st.form_submit_button(
-                "✅ APPROVE DIAGNOSIS — generate training automatically",
+                "Save review and prepare selected training",
                 type="primary",
                 width="stretch",
             )
@@ -631,11 +648,6 @@ if diag:
                 edits,
                 approval_mode="synthetic_demo" if sample_mode else "human_review",
             )
-            if not approved:
-                st.warning(
-                    "No finding is ticked 'Include in training'. Tick at least one and approve again."
-                )
-                st.stop()
             # Keep the reviewer's edits separate from the model's original values.
             changes = []
             for f in diag["findings"]:
@@ -665,13 +677,13 @@ if diag:
                             "supervisor_value": e["supervisor_note"],
                         }
                     )
-                if not e["include"]:
+                if e["include"] != f["training_recommended"]:
                     changes.append(
                         {
                             "finding": f["id"],
                             "field": "include",
                             "ai_value": f["training_recommended"],
-                            "supervisor_value": False,
+                            "supervisor_value": e["include"],
                         }
                     )
             approval = {
@@ -680,99 +692,25 @@ if diag:
                 "approved_findings": [a["id"] for a in approved],
                 "changes": changes,
             }
-            pipeline.save_json(
-                "approval", approval, source_kind=data.get("source_kind", "synthetic")
-            )
             st.session_state.approval = approval
-
             try:
-                if live:
-                    session = st.session_state.session
-                    if (
-                        session is None
-                    ):  # e.g. the page was reloaded - open a new session for the training calls
-                        session = HarnessSession()
-                        st.session_state.session = session
-                    with st.status(
-                        f"Stage 4 · Training design — generating {len(approved)} module(s) automatically…",
-                        expanded=True,
-                    ) as status:
-                        ph = st.empty()
-                        received = [0]
-
-                        def on_progress(i, n, finding):
-                            received[0] = 0
-                            st.write(f"Module {i}/{n}: {finding['title']}")
-
-                        def on_text(chunk):
-                            received[0] += len(chunk)
-                            if received[0] % 400 < len(chunk):
-                                ph.caption(f"receiving … {received[0]:,} characters")
-
-                        result = pipeline.run_training(
-                            session,
-                            approved,
-                            data,
-                            on_progress=on_progress,
-                            on_text=on_text,
-                        )
-                        status.update(
-                            label=f"Stage 4 complete · {len(result['modules'])} module(s) generated"
-                            + (
-                                f", {len(result['errors'])} failed"
-                                if result["errors"]
-                                else ""
-                            ),
-                            # Show partial failure instead of a green success state.
-                            state="error" if result["errors"] else "complete",
-                            expanded=False,
-                        )
-                elif sample_mode:
-                    result = sample_walkthrough.demo_training(approved, data)
-                else:
-                    result = pipeline.load_json("training")
-                    if not result:
-                        raise pipeline.PipelineError(
-                            "No saved training to replay.\nFix: run the full flow once in Live mode."
-                        )
-                    if result.get("_meta", {}).get(
-                        "data_fingerprint"
-                    ) != pipeline.data_fingerprint(data):
-                        raise pipeline.PipelineError(
-                            "The saved training was created from a different QA dataset."
-                        )
-                    wanted = {a["id"] for a in approved}
-                    result["modules"] = [
-                        m for m in result["modules"] if m["finding_id"] in wanted
-                    ]
-                    result["approved_findings"] = approved
-                    result["alignment"] = pipeline.alignment_check(
-                        approved, result["modules"]
-                    )
+                result = (
+                    sample_walkthrough.demo_training(approved, data)
+                    if sample_mode
+                    else generate_training(diag, approval, approved, data)
+                )
                 st.session_state.training = result
                 st.rerun()
             except (HarnessError, pipeline.PipelineError, get_data.DataError) as e:
-                show_error("Stage 4 failed after approval", e)
+                show_error("Stage 4 failed after review", e)
                 st.rerun()
     else:
-        ap = st.session_state.approval or {}
-        if not live and not sample_mode and not ap:
-            st.info(
-                "REPLAY — saved training is shown as originally generated. "
-                "This run has no separately recorded supervisor approval."
-            )
-        else:
-            mode_note = (
-                "Handwritten synthetic practice was loaded"
-                if sample_mode
-                else "The original saved approval is shown; no new review occurred"
-                if not live
-                else "Training followed this approval"
-            )
-            st.success(
-                f"Reviewed by **{ap.get('approved_by', '?')}** at {ap.get('approved_at', '?')} — "
-                f"findings {', '.join(ap.get('approved_findings', []))}. {mode_note}."
-            )
+        ap = st.session_state.approval
+        selected = ", ".join(ap["approved_findings"]) or "none"
+        st.success(
+            f"Reviewed by **{ap['approved_by']}** at {ap['approved_at']}. "
+            f"Findings selected for training: {selected}."
+        )
         if ap.get("changes"):
             with st.expander(
                 f"What the supervisor changed before approving ({len(ap['changes'])} edit(s))"
@@ -781,15 +719,15 @@ if diag:
                     pd.DataFrame(ap["changes"]), width="stretch", hide_index=True
                 )
         else:
-            st.caption("The supervisor approved the AI findings without changes.")
+            st.caption("The review recorded no edits to the suggested findings.")
 
 # ======================================================================================
-# STAGE 4 — Training, hands-on practice, role-play (+ Stage 5 alignment check)
+# STAGE 4 — Coaching, practice, and structural alignment
 # ======================================================================================
 result = st.session_state.training
 if result:
     st.divider()
-    st.header("4 · Training & hands-on practice (Training Design)")
+    st.header("4 · Coaching and practice")
     st.caption(
         "Each module follows an approved finding: diagnosis → objective → instruction → exercise → scenario → roleplay. "
         + (
@@ -802,6 +740,22 @@ if result:
         st.info(
             f"REPLAY of the training saved {result.get('_meta', {}).get('generated_at', '?')}."
         )
+
+    if st.session_state.save_error:
+        st.warning(st.session_state.save_error)
+    if not result["approved_findings"]:
+        st.info("Review complete. No training was selected.")
+    if live and result["errors"] and st.button("Retry failed training modules"):
+        failed_ids = {error["finding_id"] for error in result["errors"]}
+        retry_findings = [finding for finding in result["approved_findings"] if finding["id"] in failed_ids]
+        try:
+            st.session_state.training = generate_training(
+                diag, st.session_state.approval, retry_findings, data, previous=result
+            )
+            st.session_state.error = None
+        except (HarnessError, pipeline.PipelineError, get_data.DataError) as exc:
+            show_error("Training retry failed", exc)
+        st.rerun()
 
     by_id = {f["id"]: f for f in result.get("approved_findings", [])}
     for mod in result["modules"]:
@@ -956,100 +910,36 @@ if result:
     ]
     st.dataframe(pd.DataFrame(al_rows), width="stretch", hide_index=True)
 
-    # ---- exports for the presentation ----
-    def training_markdown(result, approval):
-        lines = [
-            "# Targeted training package — generated from approved QA diagnosis",
-            "",
-        ]
-        if approval:
-            lines += [
-                f"Approved by {approval.get('approved_by')} at {approval.get('approved_at')}; "
-                f"findings {', '.join(approval.get('approved_findings', []))}.",
-                "",
-            ]
-        for mod in result["modules"]:
-            f = by_id.get(mod["finding_id"], {})
-            lines += [
-                f"## {mod['finding_id']} → {mod['module_title']}",
-                f"*Fixes:* {f.get('title', '')} — {f.get('behavior', '')} ({f.get('defect_rate_pct', '?')}% defect rate; root cause: {f.get('root_cause_type', '')})",
-                f"*Delivery:* {mod['delivery']}, {mod.get('duration_minutes', '?')} min",
-                "",
-                f"**Learning objective:** {mod['learning_objective']}",
-                "",
-                f"**Why this fixes the gap:** {mod['why_this_fixes_the_gap']}",
-                "",
-                "### Instruction",
-            ]
-            lines += [f"- {s}" for s in mod["instruction"]]
-            kc = mod["knowledge_check"]
-            lines += ["", "### Knowledge check", kc.get("question", "")] + [
-                f"- {o}" for o in kc.get("options", [])
-            ]
-            lines += [
-                f"Correct: {kc.get('correct', '')} — {kc.get('feedback', '')}",
-                "",
-            ]
-            ex = mod["hands_on_exercise"]
-            lines += [
-                f"### Hands-on exercise: {ex.get('title', '')}",
-                f"Trainee: {ex.get('trainee_instructions', '')}",
-                f"Facilitator: {ex.get('facilitator_instructions', '')}",
-                "Success criteria:",
-            ]
-            lines += [f"- {s}" for s in ex.get("success_criteria", [])]
-            sc = mod["simulation_scenario"]
-            lines += [
-                "",
-                "### Simulation scenario",
-                f"Call driver: {sc.get('call_driver', '')}",
-                f"Member persona: {sc.get('member_persona', '')}",
-                f"Member emotion: {sc.get('member_emotion', '')}",
-                f"Context: {sc.get('scenario_context', '')}",
-                f"Behavioral target: {sc.get('behavioral_target', '')}",
-                f"Expected agent response: {sc.get('expected_agent_response', '')}",
-                "Scoring criteria:",
-            ]
-            lines += [f"- {s}" for s in sc.get("scoring_criteria", [])]
-            lines += ["", "### Role-play script"]
-            for turn in mod["roleplay_script"]:
-                spk = str(turn.get("speaker", "")).upper()
-                if spk == "BRANCH":
-                    lines.append(
-                        f"- BRANCH — if demonstrated: {turn.get('if_agent_demonstrates_behavior', '')} | if not: {turn.get('if_agent_does_not', '')}"
-                    )
-                else:
-                    note = (
-                        f"  _(coach: {turn['coach_note']})_"
-                        if turn.get("coach_note")
-                        else ""
-                    )
-                    lines.append(f"- **{spk}:** {turn.get('line', '')}{note}")
-            lines.append("")
-        return "\n".join(lines)
-
-    d1, d2 = st.columns(2)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M")
-    d1.download_button(
-        "Download training package (.md)",
-        training_markdown(result, st.session_state.approval),
-        file_name=f"training_package_{stamp}.md",
-        mime="text/markdown",
-        width="stretch",
-    )
-    d2.download_button(
-        "Download full run (.json)",
-        json.dumps(
-            {
-                "diagnosis": diag,
-                "approval": st.session_state.approval,
-                "training": result,
-            },
-            indent=2,
-            default=str,
-        ),
-        file_name=f"coaching_run_{stamp}.json",
-        mime="application/json",
-        width="stretch",
-    )
+    # Private outputs can contain sensitive reviewer notes and model responses.
+    if data["source_kind"] == "private":
+        st.caption("Downloads are disabled for private QA runs.")
+    else:
+        source_label = "Handwritten synthetic walkthrough" if sample_mode else "Bedrock, synthetic QA data"
+        status = pipeline.training_status(result)
+        d1, d2 = st.columns(2)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M")
+        d1.download_button(
+            "Download training package (.md)",
+            training_markdown(result, st.session_state.approval, source_label, status),
+            file_name=f"training_package_{stamp}.md",
+            mime="text/markdown",
+            width="stretch",
+        )
+        d2.download_button(
+            "Download full run (.json)",
+            json.dumps(
+                {
+                    "source": source_label,
+                    "status": status,
+                    "diagnosis": diag,
+                    "approval": st.session_state.approval,
+                    "training": result,
+                },
+                indent=2,
+                default=str,
+            ),
+            file_name=f"coaching_run_{stamp}.json",
+            mime="application/json",
+            width="stretch",
+        )
 
